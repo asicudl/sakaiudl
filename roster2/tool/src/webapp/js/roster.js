@@ -1,6 +1,7 @@
 import { loadProperties } from "/webcomponents/sakai-i18n.js";
 import "/webcomponents/assets/imagesloaded/imagesloaded.pkgd.min.js";
 
+roster.members = [];
 roster.helpers = {};
 
 roster.setupPrintButton = function () {
@@ -31,16 +32,20 @@ roster.setupPrintButton = function () {
             });
           });
         }
-
+        
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", () => doIt());
         } else {
           doIt();
         }
 
-        //});
       },
     });
+  });
+
+  // Exit "printMode" after print is done
+  window.addEventListener('afterprint', event => {
+    roster.renderMembership({ renderAll: true, printMode: false });
   });
 };
 
@@ -119,6 +124,17 @@ roster.addHideOptionHandlers = function () {
         document.querySelectorAll(".roster-info-card").forEach(e => e.style.display = "block");
       }
       roster.checkScroll();
+  });
+};
+
+roster.addAdditionalInfoModalHandlers = function () {
+
+  $('button.additional-info').prop("onclick", null).off("click");
+
+  $('button.additional-info').click(function (e) {
+
+    const userId = this.getAttribute("data-user-id");
+    roster.renderAdditionalInfoModal(userId)
   });
 };
 
@@ -281,6 +297,25 @@ roster.switchState = function (state, args) {
   }
 };
 
+roster.renderAdditionalInfoModal = function (userId) {
+
+  const member = roster.members.find(member => member.userId === userId);
+  const memberName = roster.firstNameLastName ? member.displayName : member.sortName;
+  const title = roster.helpers.tr("additionalInfo_modal_title", memberName);
+
+  // Render additional_info_modal_content template to string
+  const htmlContent = Handlebars.templates.additional_info_modal_content(member, { helpers: roster.helpers });
+
+  roster.renderModalDialog(title, htmlContent, null);
+
+  $("#roster-modal").modal();
+};
+
+roster.renderModalDialog = function (title, htmlContent, htmlFooter) {
+
+  roster.render('modal', { title, htmlContent, htmlFooter }, 'roster-modal-wrapper');
+};
+
 roster.renderGroupMembership = function (groupId) {
 
   if (groupId === roster.DEFAULT_GROUP_ID) {
@@ -315,6 +350,9 @@ roster.renderMembership = function (options) {
           viewPronouns: roster.viewPronouns,
           viewUserNamePronunciation: roster.viewUserNamePronunciation,
           viewUserProperty: roster.viewUserProperty,
+          viewCandidateDetails: roster.viewCandidateDetails,
+          anyAdditionalInfoPresent: roster.members.findIndex(m => m.additionalNotes || m.specialNeeds) > -1,
+          anyStudentNumberPresent: roster.members.findIndex(m => m.studentNumber) > -1,
           viewProfile: roster.currentUserPermissions.viewProfile,
           viewGroup : roster.currentUserPermissions.viewGroup,
           viewPicture: true,
@@ -436,6 +474,17 @@ roster.renderMembership = function (options) {
         }
 
         m.hasProperties = m.userProperties && Object.keys(m.userProperties).length > 0;
+
+        m.hasSpecialNeeds = m.specialNeeds && m.specialNeeds.length > 0;
+        m.hasAdditionalNotes = m.additionalNotes && m.additionalNotes.length > 0;
+        
+        m.hasAdditionalInfo = m.hasSpecialNeeds || m.hasAdditionalNotes;
+
+        // Append to the roster members the new loaded members.
+        if (!roster.members.find(item => item.userId === m.userId)) {
+          roster.members.push(m);
+        }
+
       });
 
       roster.renderMembers(members, $('#roster-members'), enrollmentsMode, options);
@@ -472,6 +521,8 @@ roster.renderMembership = function (options) {
             roster.renderGroupMembership(value);
           }
         });
+
+        roster.addAdditionalInfoModalHandlers();
 
         if (roster.userIds) {
           $(window).off('scroll.roster');
@@ -598,6 +649,9 @@ roster.renderMembers = function (members, target, enrollmentsMode, options) {
           viewPronouns: roster.viewPronouns,
           viewUserNamePronunciation: roster.viewUserNamePronunciation,
           viewUserProperty: roster.viewUserProperty,
+          viewCandidateDetails: roster.viewCandidateDetails,
+          anyAdditionalInfoPresent: roster.members.findIndex(m => m.additionalNotes || m.specialNeeds) > -1,
+          anyStudentNumberPresent: roster.members.findIndex(m => m.studentNumber) > -1,
           viewProfile: roster.currentUserPermissions.viewProfile,
           viewGroup : roster.currentUserPermissions.viewGroup,
           viewPicture: true,
@@ -993,7 +1047,11 @@ var loadRoster = function () {
   loadProperties({bundle: "roster"}).then(i18n => {
 
     roster.i18n = i18n;
-    roster.helpers["tr"] =  key => roster.i18n[key];
+    roster.helpers["tr"] =  (key, ...insertions) => {
+      let translation = roster.i18n[key];
+      insertions?.forEach((insertion, index) => translation = translation?.replace(`{${index}}`, insertion));
+      return translation;
+    };
     roster.loadSiteDataAndInit();
   });
 };
