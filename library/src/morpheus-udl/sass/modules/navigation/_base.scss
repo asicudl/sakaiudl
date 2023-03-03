@@ -858,6 +858,11 @@ body.is-logged-out{
 		margin: $standard-spacing 0 0 0;
 		padding: 0;
 
+                &.okayNav__nav--invisible {
+                        margin-top: 10px;
+                        box-shadow: none;
+                }
+
 		li.#{$namespace}sitesNav__menuitem{
 			@include display-flex;
 			@include align-items(center);

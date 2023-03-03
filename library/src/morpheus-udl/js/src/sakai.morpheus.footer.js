@@ -37,10 +37,20 @@ $PBJQ(document).ready(function() {
 	
 			if( $PBJQ('#preferredTime').length == 1 ) {
 				var offsetDate = new Date((new Date()).getTime() + preferredLocalOffset);
-				var dateString = offsetDate.toUTCString()
+				var dateString = ""; 
+
+				if (portal.locale) { 
+					var newDate = new Date(offsetDate.toUTCString()
+ 						.replace(/GMT/, "")
+ 						.replace(/UTC/, ""));
+ 					dateString = newDate.toLocaleString(portal.locale);
+
+				}
+				else {
+					dateString = offsetDate.toUTCString()
 						.replace(/GMT/, preferredTzDisplay)
 						.replace(/UTC/, preferredTzDisplay);
-	
+	                        }
 				$PBJQ('#preferredTime').text(dateString);
 			}
 			
