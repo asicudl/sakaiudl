@@ -42,7 +42,7 @@
     /////////////////////////////////////////////////////////////
 
     // Logo
-    --logo: url(#{$skin-path}images/logo-udl.png);
+    --logo: url(#{$skin-path}images/logo.png);
     --logo-height: 36px;
     --logo-width: 126px;
     --logo-opacity: 1;
@@ -183,14 +183,14 @@
     --tool-tab-active-background-color: var(--sakai-background-color-1);
     --tool-tab-active-highlight-color:var(--sakai-active-color-3);
 
-    --top-header-background: var(--sakai-color-gray--darker-7);
+    --top-header-background: var(--sakai-color-white);
     --top-header-profile-border-color-top: var(--sakai-secondary-color-1);
     --top-header-profile-border-color-right: var(--sakai-secondary-color-1);
     --top-header-profile-border-color-bottom: var(--sakai-tertiary-color-1);
     --top-header-profile-border-color-left: var(--sakai-tertiary-color-1);
     --top-header-profile-border-color-inner: var(--sakai-background-color-1);
 
-    --sites-nav-background: var(--sakai-background-color-1);
+    --sites-nav-background: var(--sakai-brand);
 
     --breadcrumbs-color: var(--sakai-text-color-1);
     --breadcrumbs-tool-color: var(--sakai-primary-color-1);
@@ -267,11 +267,11 @@
     /* Admin Become User view */
     --become-user-primary: var(--sakai-color-purple--darker-1);
 
-    --topNav-text-color: var(--sakai-text-color-inverted); // used for links and text in the topNav
+    --topNav-text-color: var(--sakai-brand); // used for links and text in the topNav
     --topNav-border-color: var(--sakai-border-color); // used for topNav spacers
 
     /* Favorites */
-    --sites-nav-background: var(--sakai-background-color-1);
+    --sites-nav-background: var(--sakai-brand);
 
     /* Default state - not selected */
     --sites-nav-menu-item-background: var(--sakai-passive-color-1);
