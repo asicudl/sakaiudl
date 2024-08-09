@@ -47,7 +47,7 @@
 						<div class="row table-space table-row">
 
 						<div class="col-sm-5">
-								<select name="new_group" id="selectedGroupId">
+								<select name="new_group" id="selectedGroupId" th:aria-label="#{new_group}">
 									<option value="none" disabled selected th:text="#{none}"/>
 									<option th:each="group : ${groupsMap}"
 											th:value="${group.key}"
@@ -57,7 +57,7 @@
 							</div>
 
 							<div class="col-sm-5">
-								<select name="new_channel" id="selectedChannelId">
+								<select name="new_channel" id="selectedChannelId" th:aria-label="#{new_channel}">
 									<option value="none" disabled selected th:text="#{none}"/>
 									<option th:each="channel : ${channelsMap.values()}"
 											th:value="${channel.id}"
@@ -72,6 +72,7 @@
 									   th:id="|btn_add_new-sync|"
 									   class="fa fa-solid fa-plus"
 									   tabindex="0"
+									   th:aria-label="#{group_synch.new_title}"
 									   th:data-url="@{/add-groupSynchronization/{id}(id=${siteSynchronizationId})}"
 									   onclick="createGroupSynchronization(this, this.getAttribute('data-url'))"
 									></i>
@@ -86,6 +87,7 @@
 									<i role="button"
 									   th:id="|btn_${entry.id}|"
 									   class="fa fa-solid fa-minus"
+									   th:aria-label="#{group_synch.remove_title}"
 									   tabindex="0"
 									   th:data-url="@{/delete-groupSynchronization/{id}(id=${entry.id})}"
 									   onclick="deleteGroupSynchronization(this, this.getAttribute('data-url'))">

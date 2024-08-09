@@ -50,6 +50,7 @@
 	<!-- Status -->
 	<div class="col-xs-1 container-flex" th:switch="${row.status}" th:title="${row.status}">
 		<div style="color: green;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).OK}" th:text="#{status.OK}" />
+		<div style="color: orange;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).PARTIAL_OK}" th:text="#{status.PARTIAL_OK}" />
 		<div style="color: orange;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).KO}" th:text="#{status.KO}" />
 		<div style="color: grey;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).NONE}" th:text="#{status.NONE}" />
 		<div style="color: red;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).ERROR}" th:text="#{status.ERROR}" />
@@ -102,8 +103,26 @@
 					<span class="text-bold" th:text="#{status}"></span>
 				</div>
 			</div>
-			<div th:each="grouprow : ${siteRow.groupSynchronizationsList}" class="group-row row table-space">
-				<div class="col-xs-4" th:text="${groupsMap[grouprow.groupId]?.title} ?: '???'" th:title="#{group.id(${grouprow.groupId})}"></div>
+			<div th:each="grouprow : ${siteRow.groupSynchronizationsList}" class="group-row row table-space" style="display: flex;">
+				<div class="col-xs-4"  th:title="#{group.id(${grouprow.groupId})}" style="display: flex;justify-content: center; gap: 3px;">
+					<span th:text="${groupsMap[grouprow.groupId]?.title} ?: '???'"></span>
+					<div th:if="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).ERROR == grouprow.status}" style="position: relative;">
+						<i class="fa fa-info" style="color: red;" role="button" th:onclick="toggleErrorsDropdown('dropdown-' +[[${grouprow.groupId}]])"></i>
+						<div th:id="'dropdown-' + ${grouprow.groupId}" class="dropdown-content" style="display: none; position: absolute; background-color: #f9f9f9; overflow: auto; width: 340px; height: 165px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; align-items: center;padding: 10px; left: 20px;">
+							<div th:each="errorGroup : ${errorGroupMembers}">
+								<ul th:if="${errorGroup.key == grouprow.groupId}" style="margin: 0;padding: 0;">
+										<span th:text="#{error.user_synchronization}" style="margin: 0;padding: 0;"></span>
+										<ul style="margin: 0;padding: 0; margin-top: 10px; list-style: none;">
+											<li th:each="userEntry : ${errorGroup.value}" style="text-align: start; margin-bottom: 5px;">
+												<pre th:text="#{user_details(${userEntry.getEid()},${userEntry.getFirstName()},${userEntry.getLastName()},${userEntry.getEmail()})}" style="white-space: pre-wrap;"></pre>
+											</li>
+										</ul>
+								</ul>
+							</div>
+							<p th:if="${errorGroupMembers[grouprow.groupId] == null}">No users found for this group.</p>
+						</div>
+					</div>
+				</div>
 				<div class="col-xs-4" th:text="${channelsMap[grouprow.channelId]?.name} ?: '???'" th:title="#{channel.id(${grouprow.channelId})}"></div>
 				<div class="col-xs-4"
 					th:switch="${grouprow.status}"

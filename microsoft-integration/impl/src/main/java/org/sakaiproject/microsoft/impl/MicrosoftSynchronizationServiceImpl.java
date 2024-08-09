@@ -65,7 +65,6 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import static org.sakaiproject.microsoft.api.MicrosoftCommonService.MAX_CHANNELS;
-import static org.sakaiproject.microsoft.api.MicrosoftCommonService.errorUsers;
 
 
 @Log4j2
@@ -93,8 +92,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 	private Set<String> disabledGroupListeners = ConcurrentHashMap.newKeySet();
 	//used in hooks to synchronize. "add users to group" must happen after "create group"
 	private ConcurrentHashMap<String, Object> newGroupLock = new ConcurrentHashMap<>();
-
-	//private static final int MAX_CHANNELS = 3;
 
 	public void init() {
 		microsoftMessagingService.listen(MicrosoftMessage.Topic.CREATE_ELEMENT, message -> {
@@ -220,6 +217,21 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					}
 					return ss;
 				})
+				.collect(Collectors.toList());
+		return result;
+	}
+
+	@Override
+	public List<SiteSynchronization> getFilteredSiteSynchronizations(boolean fillSite, SakaiSiteFilter filter, ZonedDateTime fromDate, ZonedDateTime toDate) {
+		final List<Site> sites = sakaiProxy.getSakaiSites(filter);
+		List<SiteSynchronization> result = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false)
+				.map(ss -> {
+					if (fillSite) {
+						ss.setSite(sakaiProxy.getSite(ss.getSiteId()));
+					}
+					return ss;
+				})
+				.filter(ss -> sites.contains(sakaiProxy.getSite(ss.getSiteId())))
 				.collect(Collectors.toList());
 		return result;
 	}
@@ -522,7 +534,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 			//get site users that are not in team
 			filteredSiteMembers = siteMembers.diffWith(teamMembers);
-			errorUsers.putAll(filteredSiteMembers.getMembers());
+
 
 			if (log.isDebugEnabled()) {
 				log.debug("diff members...");
@@ -647,6 +659,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//user does not exist -> create invitation
 					User u = (User) filteredSiteMembers.getMembers().get(id);
 					mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
+					microsoftCommonService.addErrorUsers(u);
 
 					if (mu != null) {
 						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
@@ -947,6 +960,8 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			for (String id : filteredGroupMembers.getMemberIds()) {
 				boolean res = false;
 				MicrosoftUser mu = microsoftCommonService.getUser(id, mappedMicrosoftUserId);
+				User u = (User) filteredGroupMembers.getMembers().get(id);
+
 				if (mu == null) {
 					//user not found in Microsoft. Check if is a newly created guest user
 					mu = guestUsers.get(id);
@@ -956,17 +971,25 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//IMPORTANT: all non-existent users in Site, have been invited. So, should be no users in Group that do not exist in Microsoft
 					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
 					res = addMemberToMicrosoftChannel(ss, gs, mu);
+					if (!res && ret != SynchronizationStatus.ERROR) {
+						ret = (mu.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
+					}
 				}
 
 				if (!res && ret != SynchronizationStatus.ERROR) {
 					//once ERROR status is set, do not check it again
 					ret = (mu != null && mu.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
 				}
+				if(!res) {
+					microsoftCommonService.addGroupUserErrors(ss.getSite().getGroup(gs.getGroupId()).getId(), u);
+				}
 			}
 
 			for (String id : filteredGroupMembers.getOwnerIds()) {
 				boolean res = false;
 				MicrosoftUser mu = microsoftCommonService.getUser(id, mappedMicrosoftUserId);
+				User u = (User) filteredGroupMembers.getMembers().get(id);
+
 				if (mu == null) {
 					//user not found in Microsoft. Check if is a newly created guest user
 					mu = guestUsers.get(id);
@@ -981,8 +1004,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				if (!res && ret != SynchronizationStatus.ERROR) {
 					//once ERROR status is set, do not check it again
 					ret = (mu != null && mu.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
-					if (ret.equals(SynchronizationStatus.ERROR)) {
-					}
+					microsoftCommonService.addGroupUserErrors(ss.getSite().getGroup(gs.getGroupId()).getId(), u);
 				}
 			}
 

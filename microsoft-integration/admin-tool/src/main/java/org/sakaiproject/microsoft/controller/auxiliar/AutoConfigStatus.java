@@ -15,21 +15,17 @@
  */
 package org.sakaiproject.microsoft.controller.auxiliar;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDate;
-import java.util.Calendar;
+import lombok.NoArgsConstructor;
+import org.sakaiproject.microsoft.api.data.AutoConfigProcessStatus;
 
 @Data
-public class MainSessionBean {
-	private static final Integer DEFAULT_PAGE_SIZE = 50;
-
-	private String sortBy = "status";
-	private String sortOrder = "ASC";
-	private Integer pageNum = 0;
-	private Integer pageSize = DEFAULT_PAGE_SIZE;
-	private String search;
-	private String siteProperty = "";
-	private String fromDate = LocalDate.of(LocalDate.now().getMonthValue() >= 7 ? LocalDate.now().getYear() : LocalDate.now().getYear() - 1, Calendar.AUGUST, 15).toString();
-	private String toDate = LocalDate.of(LocalDate.now().getMonthValue() >= 7 ? LocalDate.now().getYear() + 1 : LocalDate.now().getYear(), Calendar.AUGUST, 15).toString();
+@NoArgsConstructor
+@Builder
+@AllArgsConstructor
+public class AutoConfigStatus {
+	private AutoConfigProcessStatus status;
+	private String siteTitle;
 }

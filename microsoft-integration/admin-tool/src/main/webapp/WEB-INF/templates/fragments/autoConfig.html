@@ -44,7 +44,7 @@
 						</div>
 					</div>
 
-										<div id="autoconfig-footer">
+					<div id="autoconfig-footer">
 						<div id="autoconfig-footer-step-0" class="modal-footer act hidden">
 							<button type="button" class="btn btn-secondary" data-dismiss="modal" th:text="#{back}"></button>
 						</div>
@@ -80,10 +80,10 @@
 				<div class="col-xs-7" th:text="${countNew}"></div>
 			</div>
 		</div>
-		
+
 		<div>
 			<div id="dates-error"></div>
-			
+
 			<div class="row form-group">
 				<div class="col-xs-5 text-right text-bold" th:text="#{sync_start_date}"></div>
 				<input type="date" id="syncDateFrom" th:value="${syncDateFrom}" th:aria-label="#{index.start_date}" />
@@ -134,7 +134,7 @@
 			<div class="align-center">
 				<div class="col-xs-2"></div>
 				<div class="col-xs-8 align-center">
-				<p id="status-info"></p>
+					<p id="status-info"></p>
 				</div>
 				<div class="col-xs-2"></div>
 			</div>
@@ -340,7 +340,26 @@
 					finishLoadingProcess(data);
 				}
 
-				document.getElementById('status-info').innerHTML = data.statusList.slice(-1)[0];
+				if (data.status?.status) {
+					let status = "";
+
+					switch(data.status.status) {
+						case "END_RUNNING":
+							status = /*[[#{creation.status_finished}]]*/ ''
+							break;
+						case "START_RUNNING":
+							status = /*[[#{creation.status_started}]]*/ ''
+							break;
+						case "CREATING_TEAM":
+							status = /*[[#{creation.status_create}]]*/ ''
+							break;
+						case "BINDING_TEAM":
+							status = /*[[#{creation.status_bind}]]*/ ''
+							break;
+					}
+
+					document.getElementById('status-info').innerHTML = status;
+				}
 
 				return data;
 			}

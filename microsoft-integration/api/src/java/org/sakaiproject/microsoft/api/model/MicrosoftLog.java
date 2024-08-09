@@ -78,10 +78,13 @@ public class MicrosoftLog {
 	public static final String EVENT_USER_REMOVED_FROM_TEAM = "event.user_removed_from_team"; //microsoft
 	public static final String EVENT_USER_REMOVED_FROM_CHANNEL = "event.user_removed_from_channel"; //microsoft
 	public static final String EVENT_ALL_USERS_REMOVED_FROM_TEAM = "event.all_users_removed_from_team"; //microsoft
-	
+
+	public static final String EVENT_CREATE_TEAM_FROM_SITE = "event.create_team_from_site";
+	public static final String BINDING_TEAM_FROM_SITE = "event.binding_team_from_site";
 	public static final String EVENT_CREATE_TEAM_FROM_GROUP = "event.create_team_from_group"; //microsoft
 	public static final String EVENT_CHANNEL_CREATED = "event.channel_created"; //microsoft
-	
+	public static final String EVENT_CHANNEL_PRESENT_ON_GROUP = "event.channel_present_on_group"; //microsoft
+
 	public static final String EVENT_INVITATION_SENT = "event.invitation_sent";
 	public static final String EVENT_INVITATION_NOT_SENT = "event.invitation_not_sent";
 
