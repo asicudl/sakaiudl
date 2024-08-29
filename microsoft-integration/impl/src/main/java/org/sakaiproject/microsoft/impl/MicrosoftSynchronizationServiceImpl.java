@@ -17,9 +17,9 @@ package org.sakaiproject.microsoft.impl;
 
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -211,7 +211,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 	@Override
 	public List<SiteSynchronization> getLinkedSiteSynchronizations(boolean fillSite) {
-		List<SiteSynchronization> result = StreamSupport.stream(microsoftSiteSynchronizationRepository.findDistinctByTeam("").spliterator(), false)
+		List<SiteSynchronization> result = microsoftSiteSynchronizationRepository.findDistinctByTeam("").stream()
 				.map(ss -> {
 					if (fillSite) {
 						ss.setSite(sakaiProxy.getSite(ss.getSiteId()));
@@ -225,22 +225,17 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 	@Override
 	public List<SiteSynchronization> getFilteredSiteSynchronizations(boolean fillSite, SakaiSiteFilter filter, ZonedDateTime fromDate, ZonedDateTime toDate) {
 		final List<Site> sites = sakaiProxy.getSakaiSites(filter);
-		List<SiteSynchronization> result;
-		Stream<SiteSynchronization> resultStream;
 
-		if (fromDate == null || toDate == null) {
-			resultStream = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false);
-		} else {
-			resultStream = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false);
-		}
-
-		result = resultStream.map(ss -> {
+		List<SiteSynchronization> result = microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).stream().map(ss -> {
+					Site site = null;
 					if (fillSite) {
-						ss.setSite(sakaiProxy.getSite(ss.getSiteId()));
+						site = sites.stream().filter(s -> s.getId().equals(ss.getSiteId())).findFirst().orElse(null);
+						if(Objects.nonNull(site))
+							ss.setSite(site);
 					}
-					return ss;
+					return Objects.nonNull(site) ? ss : null;
 				})
-				.filter(ss -> sites.contains(sakaiProxy.getSite(ss.getSiteId())))
+				.filter(Objects::nonNull)
 				.collect(Collectors.toList());
 		return result;
 	}
