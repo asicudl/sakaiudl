@@ -79,6 +79,7 @@ public interface MicrosoftCommonService {
 	MicrosoftUser createInvitation(String email, String redirectURL) throws MicrosoftGenericException;
 	
 	// ---------------------------------------- TEAMS / GROUPS ------------------------------------------------
+	Map<String, MicrosoftTeam> retrieveCacheTeams() throws MicrosoftCredentialsException;
 	MicrosoftTeam getGroup(String id) throws MicrosoftCredentialsException;
 	Map<String, MicrosoftTeam> getTeams() throws MicrosoftCredentialsException;
 	Map<String, MicrosoftTeam> getTeams(boolean force) throws MicrosoftCredentialsException;

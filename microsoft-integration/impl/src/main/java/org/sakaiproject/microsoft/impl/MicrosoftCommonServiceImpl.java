@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 import com.microsoft.graph.content.BatchRequestContent;
 import com.microsoft.graph.content.BatchResponseContent;
+import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.http.HttpMethod;
 import com.microsoft.graph.options.QueryOption;
 import com.microsoft.graph.requests.GroupRequest;
@@ -478,6 +479,15 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 	// ---------------------------------------- TEAMS / GROUPS ------------------------------------------------
 	@Override
+	public Map<String, MicrosoftTeam> retrieveCacheTeams() throws MicrosoftCredentialsException {
+		Cache.ValueWrapper cachedValue = getCache().get(CACHE_TEAMS);
+		if (cachedValue != null) {
+			return (Map<String, MicrosoftTeam>) cachedValue.get();
+		}
+		return new HashMap<>();
+	}
+
+	@Override
 	public MicrosoftTeam getGroup(String id) throws MicrosoftCredentialsException {
 		try {
 			Group group = getGraphClient()
@@ -505,10 +515,11 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 	@Override
 	public MicrosoftTeam getTeam(String id, boolean force) throws MicrosoftCredentialsException {
+		Cache.ValueWrapper cachedValue = getCache().get(CACHE_TEAMS);
+
 		try {
 			//get from cache (if not force)
 			if (!force) {
-				Cache.ValueWrapper cachedValue = getCache().get(CACHE_TEAMS);
 				if (cachedValue != null) {
 					Map<String, MicrosoftTeam> map = (Map<String, MicrosoftTeam>) cachedValue.get();
 					if (map.containsKey(id)) {
@@ -530,16 +541,16 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					.build();
 
 			//update cache
-			Cache.ValueWrapper cachedValue = getCache().get(CACHE_TEAMS);
-			if (cachedValue != null) {
-				Map<String, MicrosoftTeam> teamsMap = (Map<String, MicrosoftTeam>) cachedValue.get();
-				teamsMap.put(id, mt);
-
-				getCache().put(CACHE_TEAMS, teamsMap);
-			}
+			Map<String, MicrosoftTeam> teamsMap = cachedValue != null ? (Map<String, MicrosoftTeam>) cachedValue.get() : new HashMap<>();
+			teamsMap.put(id, mt);
+			getCache().put(CACHE_TEAMS, teamsMap);
 			return mt;
 		} catch (MicrosoftCredentialsException e) {
 			throw e;
+		} catch (GraphServiceException e) {
+			Map<String, MicrosoftTeam> teamsMap = cachedValue != null ? (Map<String, MicrosoftTeam>) cachedValue.get() : new HashMap<>();
+			teamsMap.remove(id);
+			getCache().put(CACHE_TEAMS, teamsMap);
 		} catch (Exception e) {
 			log.debug("Microsoft Team not found with id={}", id);
 		}

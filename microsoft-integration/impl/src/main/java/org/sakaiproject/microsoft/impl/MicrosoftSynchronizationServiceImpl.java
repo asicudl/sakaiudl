@@ -19,6 +19,7 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -224,8 +225,16 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 	@Override
 	public List<SiteSynchronization> getFilteredSiteSynchronizations(boolean fillSite, SakaiSiteFilter filter, ZonedDateTime fromDate, ZonedDateTime toDate) {
 		final List<Site> sites = sakaiProxy.getSakaiSites(filter);
-		List<SiteSynchronization> result = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false)
-				.map(ss -> {
+		List<SiteSynchronization> result;
+		Stream<SiteSynchronization> resultStream;
+
+		if (fromDate == null || toDate == null) {
+			resultStream = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false);
+		} else {
+			resultStream = StreamSupport.stream(microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate).spliterator(), false);
+		}
+
+		result = resultStream.map(ss -> {
 					if (fillSite) {
 						ss.setSite(sakaiProxy.getSite(ss.getSiteId()));
 					}

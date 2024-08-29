@@ -49,6 +49,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -138,16 +139,18 @@ public class MainController {
 
 		List<SiteSynchronization> list;
 		Map<String, MicrosoftTeam> map;
+		ZonedDateTime fromDate = null;
+		ZonedDateTime toDate = null;
+		boolean filterByDate = !requestBody.getFromDate().isEmpty() && !requestBody.getToDate().isEmpty();
 
-		if(requestBody.getFromDate().isEmpty() || requestBody.getToDate().isEmpty()) {
-			list = microsoftSynchronizationService.getFilteredSiteSynchronizations(true, SakaiSiteFilter.builder().siteProperty(requestBody.getSiteProperty()).build(), null, null);
-		} else {
-			ZonedDateTime fromDate = LocalDate.parse(requestBody.getFromDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(ZoneOffset.UTC);
-			ZonedDateTime toDate = LocalDate.parse(requestBody.getToDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(ZoneOffset.UTC);
-			list = microsoftSynchronizationService.getFilteredSiteSynchronizations(true, SakaiSiteFilter.builder().siteProperty(requestBody.getSiteProperty()).build(), fromDate, toDate);
+		if (filterByDate) {
+			fromDate = LocalDate.parse(requestBody.getFromDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(ZoneOffset.UTC);
+			toDate = LocalDate.parse(requestBody.getToDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay(ZoneOffset.UTC);
 		}
 
-		map = microsoftCommonService.getTeamsBySites(list);
+		list = microsoftSynchronizationService.getFilteredSiteSynchronizations(true, SakaiSiteFilter.builder().siteProperty(requestBody.getSiteProperty()).build(), fromDate, toDate);
+
+		map = microsoftCommonService.retrieveCacheTeams();
 
 		//filter elements
 		if (StringUtils.isNotBlank(search)) {
@@ -279,6 +282,22 @@ public class MainController {
 				model.addAttribute("errorGroupMembers", microsoftCommonService.getErrorGroupsUsers());
 			}
 		}
+		return ROW_SITE_SYNCH_FRAGMENT;
+	}
+
+
+	//called by AJAX - returns FRAGMENT
+	@GetMapping(value = {"/refreshSite/{id}"})
+	public String refreshRow(@PathVariable String id, Model model) throws Exception {
+		SiteSynchronization ss = microsoftSynchronizationService.getSiteSynchronization(SiteSynchronization.builder().id(id).build(), true);
+
+		if (ss != null) {
+			Map<String, MicrosoftTeam> teams = model.getAttribute("teamsMap") == null ? new HashMap<>() : (Map) model.getAttribute("teamsMap");
+			teams.put(ss.getTeamId(), microsoftCommonService.getTeam(ss.getTeamId(), true));
+			model.addAttribute("row", ss);
+			model.addAttribute("teamsMap", teams);
+		}
+
 		return ROW_SITE_SYNCH_FRAGMENT;
 	}
 
