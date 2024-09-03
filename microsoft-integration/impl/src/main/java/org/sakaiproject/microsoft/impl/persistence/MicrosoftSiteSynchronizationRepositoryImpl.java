@@ -84,13 +84,6 @@ public class MicrosoftSiteSynchronizationRepositoryImpl extends BasicSerializabl
 	}
 
 	@Override
-	public List<SiteSynchronization> findDistinctByTeam(String teamId) {
-		return (List<SiteSynchronization>)startCriteriaQuery()
-				.add(Restrictions.ne("teamId", teamId))
-				.list();
-	}
-
-	@Override
 	public List<SiteSynchronization> findByDate(ZonedDateTime fromDate, ZonedDateTime toDate) {
 		Criteria criteria = startCriteriaQuery();
 		if(Objects.nonNull(fromDate) && Objects.nonNull(toDate)) {

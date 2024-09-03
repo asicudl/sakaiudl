@@ -55,15 +55,13 @@ public class RunSynchronizationsJob implements Job {
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
 		log.info("RunSynchronizationsJob started.");
-		
 		Session session = sessionManager.getCurrentSession();
 		try {
 			session.setUserEid("admin");
 			session.setUserId("admin");
-			
 			SakaiSiteFilter siteFilter = microsoftConfigurationService.getJobSiteFilter();
 			
-			List<SiteSynchronization> list = microsoftSynchronizationService.getLinkedSiteSynchronizations(true);
+			List<SiteSynchronization> list = microsoftSynchronizationService.getAllSiteSynchronizations(true);
 			for(SiteSynchronization ss : list) {
 				try {
 					//check filters
