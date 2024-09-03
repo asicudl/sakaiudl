@@ -50,7 +50,23 @@
 	<!-- Status -->
 	<div class="col-xs-1 container-flex" th:switch="${row.status}" th:title="${row.status}">
 		<div style="color: green;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).OK}" th:text="#{status.OK}" />
-		<div style="color: orange;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).PARTIAL_OK}" th:text="#{status.PARTIAL_OK}" />
+		<div style="flex-direction: row;display: flex;align-items: center;gap: 4px;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).PARTIAL_OK}">
+			<div style="color: orange;" th:text="#{status.PARTIAL_OK}"/>
+			<i th:if="${errorMembers != null && errorMembers[row.teamId] != null}" class="fa fa-info-circle" style="color: #a89e03; cursor: pointer;" th:onclick="toggleErrorsDropdown('dropdown-' +[[${row.teamId}]])"></i>
+			<div th:id="'dropdown-' + ${row.teamId}" class="dropdown-content" style="display: none; position: absolute; background-color: #f9f9f9; overflow: auto; width: 425px; height: 180px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; align-items: center;padding: 10px; top: 35px;">
+				<div th:each="member : ${errorMembers}">
+					<ul th:if="${member.key == row.teamId}" style="margin: 0;padding: 0;">
+						<span th:text="#{error.user_synchronization}" style="margin: 0;padding: 0;"></span>
+						<ul style="margin: 0;padding: 0; margin-top: 10px; list-style: none;">
+							<li th:each="userEntry : ${member.value}" style="text-align: start; margin-bottom: 5px;">
+								<pre th:text="#{user_details(${userEntry.getEid()},${userEntry.getFirstName()},${userEntry.getLastName()},${userEntry.getEmail()})}" style="white-space: pre-wrap;"></pre>
+							</li>
+						</ul>
+					</ul>
+				</div>
+				<p th:if="${errorMembers == null || row.teamId == null || errorMembers[row.teamId] == null}">No users found for this group.</p>
+			</div>
+		</div>
 		<div style="color: orange;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).KO}" th:text="#{status.KO}" />
 		<div style="color: grey;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).NONE}" th:text="#{status.NONE}" />
 		<div style="color: red;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).ERROR}" th:text="#{status.ERROR}" />

@@ -296,14 +296,15 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	}
 
 	@Override
-	public List<org.sakaiproject.user.api.User> getErrorUsers() throws MicrosoftCredentialsException {
+	public Map<String, Set<org.sakaiproject.user.api.User>> getErrorUsers() throws MicrosoftCredentialsException {
 		return errorUsers;
 	}
 
 	@Override
-	public void addErrorUsers(org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException {
-		if (user != null) {
-			errorUsers.add(user);
+	public void addErrorUsers(String id, org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException {
+		if (id != null && user != null) {
+			Set<org.sakaiproject.user.api.User> existingUsers = errorUsers.computeIfAbsent(id, k -> new HashSet<>());
+			existingUsers.add(user);
 		}
 	}
 

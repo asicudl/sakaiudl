@@ -210,19 +210,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 	}
 
 	@Override
-	public List<SiteSynchronization> getLinkedSiteSynchronizations(boolean fillSite) {
-		List<SiteSynchronization> result = microsoftSiteSynchronizationRepository.findDistinctByTeam("").stream()
-				.map(ss -> {
-					if (fillSite) {
-						ss.setSite(sakaiProxy.getSite(ss.getSiteId()));
-					}
-					return ss;
-				})
-				.collect(Collectors.toList());
-		return result;
-	}
-
-	@Override
 	public List<SiteSynchronization> getFilteredSiteSynchronizations(boolean fillSite, SakaiSiteFilter filter, ZonedDateTime fromDate, ZonedDateTime toDate) {
 		List<SiteSynchronization> result = microsoftSiteSynchronizationRepository.findByDate(fromDate, toDate);
                  log.debug("MicrosoftService: getFilteredSiteSynchronizations");
@@ -674,7 +661,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//user does not exist -> create invitation
 					User u = (User) filteredSiteMembers.getMembers().get(id);
 					mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
-					microsoftCommonService.addErrorUsers(u);
+					microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
 
 					if (mu != null) {
 						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
@@ -718,6 +705,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//user does not exist -> create invitation
 					User u = (User) filteredSiteMembers.getOwners().get(id);
 					mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
+					microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
 
 					if (mu != null) {
 						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers

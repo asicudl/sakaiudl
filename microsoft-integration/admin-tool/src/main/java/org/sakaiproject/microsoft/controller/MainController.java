@@ -224,6 +224,8 @@ public class MainController {
 		model.addAttribute("siteProperty", requestBody.getSiteProperty());
 		model.addAttribute("filterCount", requestBody.getFilterCount());
 
+		model.addAttribute("errorMembers", microsoftCommonService.getErrorUsers());
+
 		return BODY_TEMPLATE;
 	}
 
@@ -280,6 +282,8 @@ public class MainController {
 			if (ss.getStatus().equals(SynchronizationStatus.ERROR)) {
 				model.addAttribute("errorMembers", microsoftCommonService.getErrorUsers());
 				model.addAttribute("errorGroupMembers", microsoftCommonService.getErrorGroupsUsers());
+			} else if (ss.getStatus().equals(SynchronizationStatus.PARTIAL_OK)) {
+				model.addAttribute("errorMembers", microsoftCommonService.getErrorUsers());
 			}
 		}
 		return ROW_SITE_SYNCH_FRAGMENT;

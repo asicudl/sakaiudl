@@ -49,7 +49,7 @@ public interface MicrosoftCommonService {
 	public static final int MAX_CHANNELS = 30;
 	public static final int MAX_ADD_CHANNELS = 20;
 
-	public static List<User> errorUsers = new ArrayList<>();
+	Map<String, Set<User>> errorUsers = new HashMap<>();
 	Map<String, Set<User>> groupErrors = new HashMap<>();
 
 
@@ -65,8 +65,8 @@ public interface MicrosoftCommonService {
 	
 	// ---------------------------------------- USERS ------------------------------------------------
 	List<MicrosoftUser> getUsers() throws MicrosoftCredentialsException;
-	List<User> getErrorUsers() throws MicrosoftCredentialsException;
-	void addErrorUsers(User user) throws MicrosoftCredentialsException;
+	Map<String, Set<User>> getErrorUsers() throws MicrosoftCredentialsException;
+	void addErrorUsers(String id, User user) throws MicrosoftCredentialsException;
 	Map<String, Set<User>> getErrorGroupsUsers() throws MicrosoftCredentialsException;
 	void addGroupUserErrors(String id, org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException;
 	MicrosoftUser getUser(String identifier, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException;
