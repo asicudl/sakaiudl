@@ -330,7 +330,7 @@ public class AutoConfigController {
 
 		for (Group g : groupsToProcess) {
 			Optional<MicrosoftChannel> channelOpt = channels.stream()
-					.filter(c -> c.getName().equalsIgnoreCase(microsoftCommonService.processMicrosoftChannelName(g.getTitle()))).findFirst();
+					.filter(c -> c.getName().replace(" ", "").equalsIgnoreCase(microsoftCommonService.processMicrosoftChannelName(g.getTitle()).replace(" ", ""))).findFirst();
 
 			channelOpt.ifPresent(channel -> {
 				GroupSynchronization gs = GroupSynchronization.builder()
@@ -406,7 +406,7 @@ public class AutoConfigController {
 
 		for (Group g : groupsToProcess) {
 			MicrosoftChannel channel = channelsMap.values().stream()
-					.filter(c -> c.getName().equalsIgnoreCase(microsoftCommonService.processMicrosoftChannelName(g.getTitle())))
+					.filter(c -> c.getName().replace(" ", "").equalsIgnoreCase(microsoftCommonService.processMicrosoftChannelName(g.getTitle()).replace(" ", "")))
 					.findAny()
 					.orElse(null);
 
