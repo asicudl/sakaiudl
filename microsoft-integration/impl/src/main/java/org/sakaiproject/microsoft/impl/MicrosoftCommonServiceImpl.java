@@ -296,12 +296,12 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	}
 
 	@Override
-	public Map<String, Set<org.sakaiproject.user.api.User>> getErrorUsers() throws MicrosoftCredentialsException {
+	public Map<String, Set<org.sakaiproject.user.api.User>> getErrorUsers() {
 		return errorUsers;
 	}
 
 	@Override
-	public void addErrorUsers(String id, org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException {
+	public void addErrorUsers(String id, org.sakaiproject.user.api.User user) {
 		if (id != null && user != null) {
 			Set<org.sakaiproject.user.api.User> existingUsers = errorUsers.computeIfAbsent(id, k -> new HashSet<>());
 			existingUsers.add(user);
@@ -309,18 +309,27 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	}
 
 	@Override
-	public Map<String, Set<org.sakaiproject.user.api.User>> getErrorGroupsUsers() throws MicrosoftCredentialsException {
+	public Map<String, Set<org.sakaiproject.user.api.User>> getErrorGroupsUsers() {
 		return groupErrors;
 	}
 
 	@Override
-	public void addGroupUserErrors(String id, org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException {
+	public void addGroupUserErrors(String id, org.sakaiproject.user.api.User user) {
 		if (id != null && user != null) {
 			Set<org.sakaiproject.user.api.User> existingUsers = groupErrors.computeIfAbsent(id, k -> new HashSet<>());
 			existingUsers.add(user);
 		}
 	}
 
+	@Override
+	public void clearErrorUsers(String id) {
+		errorUsers.remove(id);
+	}
+
+	@Override
+	public void clearErrorGroupsUsers(String id) {
+		groupErrors.remove(id);
+	}
 
 	@Override
 	public boolean checkUser(String identifier, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException {

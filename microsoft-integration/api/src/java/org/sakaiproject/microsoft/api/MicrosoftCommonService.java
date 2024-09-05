@@ -65,13 +65,17 @@ public interface MicrosoftCommonService {
 	
 	// ---------------------------------------- USERS ------------------------------------------------
 	List<MicrosoftUser> getUsers() throws MicrosoftCredentialsException;
-	Map<String, Set<User>> getErrorUsers() throws MicrosoftCredentialsException;
-	void addErrorUsers(String id, User user) throws MicrosoftCredentialsException;
-	Map<String, Set<User>> getErrorGroupsUsers() throws MicrosoftCredentialsException;
-	void addGroupUserErrors(String id, org.sakaiproject.user.api.User user) throws MicrosoftCredentialsException;
+	Map<String, Set<User>> getErrorUsers();
+	void addErrorUsers(String id, User user);
+	Map<String, Set<User>> getErrorGroupsUsers();
+	void addGroupUserErrors(String id, org.sakaiproject.user.api.User user);
+	void clearErrorUsers(String id);
 	MicrosoftUser getUser(String identifier, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException;
 	MicrosoftUser getUserById(String id) throws MicrosoftCredentialsException;
 	MicrosoftUser getUserByEmail(String email) throws MicrosoftCredentialsException;
+
+	void clearErrorGroupsUsers(String id);
+
 	boolean checkUser(String identifier, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException;
 	
 	// ---------------------------------------- INVITATIONS ------------------------------------------------
