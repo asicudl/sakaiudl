@@ -99,6 +99,9 @@ public class MicrosoftLog {
 
 	public static final String EVENT_AUTOCONFIG = "event.autoconfig";
 
+	public static final String EVENT_TOO_MANY_REQUESTS = "event.too_many_requests";
+	public static final String EVENT_USER_NOT_FOUND_ON_TEAM = "event.user_not_found_on_team";
+
 
 
 	public enum Status {

@@ -25,6 +25,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -45,6 +46,7 @@ import com.microsoft.graph.content.BatchResponseContent;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.http.HttpMethod;
 import com.microsoft.graph.options.QueryOption;
+import com.microsoft.graph.requests.ConversationMemberCollectionRequest;
 import com.microsoft.graph.requests.GroupRequest;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -66,12 +68,15 @@ import org.sakaiproject.microsoft.api.data.MicrosoftMembersCollection;
 import org.sakaiproject.microsoft.api.data.MicrosoftTeam;
 import org.sakaiproject.microsoft.api.data.MicrosoftUser;
 import org.sakaiproject.microsoft.api.data.MicrosoftUserIdentifier;
+import org.sakaiproject.microsoft.api.data.SynchronizationStatus;
 import org.sakaiproject.microsoft.api.data.TeamsMeetingData;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftCredentialsException;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftGenericException;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftInvalidCredentialsException;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftInvalidInvitationException;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftNoCredentialsException;
+import org.sakaiproject.microsoft.api.model.GroupSynchronization;
+import org.sakaiproject.microsoft.api.model.MicrosoftLog;
 import org.sakaiproject.microsoft.api.model.SiteSynchronization;
 import org.sakaiproject.microsoft.api.persistence.MicrosoftConfigRepository;
 import org.sakaiproject.microsoft.api.persistence.MicrosoftLoggingRepository;
@@ -287,10 +292,14 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 							.email(u.mail)
 							.guest(MicrosoftUser.GUEST.equalsIgnoreCase(u.userType))
 							.build()).collect(Collectors.toList()));
+			userList.forEach(u -> log.debug(u.toString()));
 			UserCollectionRequestBuilder builder = page.getNextPage();
 			if (builder == null) break;
 			page = builder.buildRequest().get();
 		}
+
+		HashMap<String, MicrosoftUser> userMap = (HashMap<String, MicrosoftUser>) userList.stream().collect(Collectors.toMap(MicrosoftUser::getId, u -> u));
+		getCache().put(CACHE_USERS, userMap);
 
 		return userList;
 	}
@@ -878,12 +887,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 	@Override
 	public MicrosoftMembersCollection getTeamMembers(String id, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException {
-		Cache.ValueWrapper cachedValue = getCache().get(CACHE_MEMBERS);
-		if (cachedValue != null) {
-			MicrosoftMembersCollection membersMap = (MicrosoftMembersCollection) cachedValue.get();
-			return membersMap;
-		}
-
 		MicrosoftMembersCollection ret = new MicrosoftMembersCollection();
 		try {
 			MicrosoftCredentials credentials = microsoftConfigRepository.getCredentials();
@@ -893,7 +896,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					.members()
 					.buildRequest()
 					.get();
-
 			while (page != null) {
 				for (ConversationMember m : page.getCurrentPage()) {
 					AadUserConversationMember member = (AadUserConversationMember) m;
@@ -925,8 +927,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				if (builder == null) break;
 				page = builder.buildRequest().get();
 			}
-
-			getCache().put(CACHE_MEMBERS, ret);
 		} catch (MicrosoftCredentialsException e) {
 			throw e;
 		} catch (Exception ex) {
@@ -1061,6 +1061,77 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public SynchronizationStatus addUsersToTeamOrGroup(String teamId, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
+		boolean res = false;
+		String dataKey = roles.contains(MicrosoftUser.OWNER) ? "ownerId" : "memberId";
+
+		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).members()
+				.buildRequest();
+
+		final int MAX_RETRY = 2;
+		final int MAX_PER_REQUEST = 20;
+		final int MAX_REQUESTS = members.size() / MAX_PER_REQUEST;
+
+		for (int i = 0; i <= MAX_REQUESTS; i++) {
+			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
+			List<MicrosoftUser> successMembers = new LinkedList<>();
+
+			int retryCount = 0;
+			while (!pendingMembers.isEmpty() && retryCount < MAX_RETRY) {
+				BatchRequestContent batchRequestContent = new BatchRequestContent();
+
+				members.forEach(member -> {
+					ConversationMember memberToAdd = new ConversationMember();
+
+					memberToAdd.oDataType = "#microsoft.graph.aadUserConversationMember";
+					memberToAdd.roles = roles;
+					memberToAdd.additionalDataManager().put("user@odata.bind", new JsonPrimitive("https://graph.microsoft.com/v1.0/users('" + member.getId() + "')"));
+
+					batchRequestContent.addBatchRequestStep(postMembers, HttpMethod.POST, memberToAdd);
+				});
+
+				BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+				HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, members);
+
+				successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
+				pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
+				List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
+				handleMicrosoftExceptions(errors);
+				retryCount++;
+			}
+
+			for (MicrosoftUser pendingMember : pendingMembers) {
+				if (!res && status != SynchronizationStatus.ERROR) {
+					//once ERROR status is set, do not check it again
+					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
+				}
+
+				// save log add member
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_ADD_MEMBER)
+						.status((pendingMember != null && pendingMember.isGuest()) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+						.addData("teamId", teamId)
+						.addData(dataKey, pendingMember != null ? pendingMember.getId() : "null")
+						.build());
+
+			}
+
+			successMembers.forEach(member -> {
+				// save log add member
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_ADD_MEMBER)
+						.status(MicrosoftLog.Status.OK)
+						.addData("teamId", teamId)
+						.addData(dataKey, member.getId())
+						.build());
+			});
+
+		}
+
+		return status;
 	}
 
 	@Override
@@ -1375,6 +1446,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		}
 
 		switch(listToProcess.get(0).getClass().getSimpleName()) {
+			case "MicrosoftUser":
+				resultMap = parseBatchResponseToMicrosoftUser(responseContent,(List<MicrosoftUser>) listToProcess);
+				break;
 			case "BaseGroup":
 				resultMap = parseBatchResponseToMicrosoftChannel(responseContent, listToProcess);
 				break;
@@ -1384,6 +1458,53 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		}
 
 		return resultMap;
+	}
+
+	private HashMap<String,?> parseBatchResponseToMicrosoftUser(BatchResponseContent responseContent, List<MicrosoftUser> listToProcess) {
+		HashMap<String, Object> responseMap = new HashMap<>();
+
+		Map<String, MicrosoftUser> successRequests =
+				responseContent.responses.stream().filter(r -> r.status <= 299).collect(Collectors.toList())
+						.stream().map(r -> {
+							Map.Entry<String, MicrosoftUser> entry = new AbstractMap.SimpleEntry<>(
+									r.body.getAsJsonObject().get("userId").getAsString(),
+									listToProcess.stream().filter(user -> user.getId().equals(r.body.getAsJsonObject().get("userId").getAsString())).findFirst().orElse(null)
+							);
+							return entry;
+						}).collect(Collectors.toMap(
+								Map.Entry::getKey,
+								Map.Entry::getValue
+						));
+
+		List<MicrosoftUser> pendingRequests = listToProcess.stream()
+				.filter(user -> !successRequests.containsKey(user.getId()))
+				.collect(Collectors.toList());
+
+		List<Map<String, ?>> errors = responseContent.responses.stream()
+				.filter(r -> r.status > 299)
+				.map(r -> {
+					String code, innerError;
+					try {
+						code = r.body.getAsJsonObject().get("error").getAsJsonObject().get("code").getAsString();
+						innerError = r.body.getAsJsonObject().get("error").getAsJsonObject().get("innerError").getAsJsonObject().get("code").getAsString();
+					} catch (Exception e) {
+						code = "Failure";
+						innerError = "Failure";
+					}
+					return Map.of(
+							"status", r.status,
+							"retryAfter", r.headers.containsKey("Retry-After") ? r.headers.get("Retry-After") : 5,
+							"code", code,
+							"innerError", innerError);
+				})
+				.collect(Collectors.toList());
+
+
+		responseMap.put("success", new ArrayList<>(successRequests.values()));
+		responseMap.put("failed", pendingRequests);
+		responseMap.put("errors", errors);
+
+		return responseMap;
 	}
 
 	private HashMap<String, ?> parseBatchResponseToMicrosoftTeam(BatchResponseContent responseContent, List<?> listToProcess) {
@@ -1640,6 +1761,126 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			return false;
 		}
 		return true;
+	}
+
+	public SynchronizationStatus addUsersToChannel(SiteSynchronization ss, GroupSynchronization gs, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
+		String teamId = ss.getTeamId();
+		String channelId = gs.getChannelId();
+		boolean res = false;
+
+		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).channels(channelId).members()
+				.buildRequest();
+
+		final int MAX_RETRY = 2;
+		final int MAX_PER_REQUEST = 20;
+		final int MAX_REQUESTS = members.size() / MAX_PER_REQUEST;
+
+		for (int i = 0; i <= MAX_REQUESTS; i++) {
+			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
+			List<MicrosoftUser> successMembers = new LinkedList<>();
+
+			int retryCount = 0;
+			while (!pendingMembers.isEmpty() && retryCount < MAX_RETRY) {
+				BatchRequestContent batchRequestContent = new BatchRequestContent();
+
+				members.forEach(member -> {
+					ConversationMember memberToAdd = new ConversationMember();
+
+					memberToAdd.oDataType = "#microsoft.graph.aadUserConversationMember";
+					memberToAdd.roles = roles;
+					memberToAdd.additionalDataManager().put("user@odata.bind", new JsonPrimitive("https://graph.microsoft.com/v1.0/users('" + member.getId() + "')"));
+
+					batchRequestContent.addBatchRequestStep(postMembers, HttpMethod.POST, memberToAdd);
+				});
+
+				BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+
+				HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, members);
+
+				successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
+				pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
+				List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
+				handleMicrosoftExceptions(errors);
+				retryCount++;
+			}
+
+			for (MicrosoftUser pendingMember : pendingMembers) {
+				if (status != SynchronizationStatus.ERROR) {
+					//once ERROR status is set, do not check it again
+					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
+				}
+
+				//save log
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
+						.status(MicrosoftLog.Status.KO)
+						.addData("email", pendingMember.getEmail())
+						.addData("microsoftUserId", pendingMember.getId())
+						.addData("siteId", ss.getSiteId())
+						.addData("teamId", ss.getTeamId())
+						.addData("groupId", gs.getGroupId())
+						.addData("channelId", gs.getChannelId())
+						.addData("owner", Boolean.toString(roles.contains(MicrosoftUser.OWNER) && !pendingMember.isGuest()))
+						.addData("guest", Boolean.toString(pendingMember.isGuest()))
+						.build());
+
+			}
+
+			successMembers.forEach(member -> {
+				//save log
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
+						.status(MicrosoftLog.Status.OK)
+						.addData("email", member.getEmail())
+						.addData("microsoftUserId", member.getId())
+						.addData("siteId", ss.getSiteId())
+						.addData("teamId", ss.getTeamId())
+						.addData("groupId", gs.getGroupId())
+						.addData("channelId", gs.getChannelId())
+						.addData("owner", Boolean.toString(roles.contains(MicrosoftUser.OWNER) && !member.isGuest()))
+						.addData("guest", Boolean.toString(member.isGuest()))
+						.build());
+			});
+
+		}
+
+		return status;
+	}
+
+	private void handleMicrosoftExceptions(List<Map<String,?>> errors) {
+		if(!errors.isEmpty()) {
+
+			if(errors.stream().anyMatch(e -> e.containsValue(429))) {
+				Map<String, ?> error = errors.stream().filter(e -> e.containsValue(429)).findFirst().get();
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_TOO_MANY_REQUESTS)
+						.addData("Status", error.get("status").toString())
+						.addData("Code", error.get("code").toString())
+						.addData("RetryAfter", error.get("retryAfter").toString())
+						.addData("InnerError", error.get("innerError").toString())
+						.build());
+				int retryAfter = Integer.parseInt(error.get("retryAfter").toString());
+
+				try {
+					Thread.sleep(retryAfter * 1000L);
+				} catch (InterruptedException ignored) {
+				}
+			} else if (errors.stream().anyMatch(e -> e.containsValue(404))) {
+				Map<String, ?> error = errors.stream().filter(e -> e.containsValue(404)).findFirst().get();
+				microsoftLoggingRepository.save(MicrosoftLog.builder()
+						.event(MicrosoftLog.EVENT_USER_NOT_FOUND_ON_TEAM)
+						.addData("Status", error.get("status").toString())
+						.addData("Code", error.get("code").toString())
+						.addData("RetryAfter", error.get("retryAfter").toString())
+						.addData("InnerError", error.get("innerError").toString())
+						.build());
+				int retryAfter = Integer.parseInt(error.get("retryAfter").toString());
+				try {
+					Thread.sleep(retryAfter * 1000L);
+				} catch (InterruptedException ignored) {
+				}
+			}
+		}
 	}
 
 	@Override

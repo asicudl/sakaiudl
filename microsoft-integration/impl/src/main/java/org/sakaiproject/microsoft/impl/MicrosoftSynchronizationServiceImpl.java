@@ -16,7 +16,12 @@
 package org.sakaiproject.microsoft.impl;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -651,9 +656,11 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 			Map<String, MicrosoftUser> guestUsers = new HashMap<>();
 
+			//microsoftCommonService.getUsers();
+			List<MicrosoftUser> membersToMicrosoft = new ArrayList<>();
+
 			//process sakai members not in the team
 			for (String id : filteredSiteMembers.getMembers().keySet()) {
-				boolean res = false;
 				MicrosoftUser mu = null;
 				//if ID is NOT empty. (can be empty if user property does not exist or is blank)
 				if (!id.startsWith("EMPTY_")) {
@@ -677,28 +684,25 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 								.addData("teamId", ss.getTeamId())
 								.addData("userId", u.getId())
 								.build());
+					} else if (ret != SynchronizationStatus.ERROR) {
+						//once ERROR status is set, do not check it again
+						ret = SynchronizationStatus.ERROR_GUEST;
 					}
 				}
 				if (mu != null) {
 					//add to team/group
-					res = addMemberToMicrosoftGroupOrTeam(ss, mu);
+					membersToMicrosoft.add(mu);
+				} else {
+					ret = SynchronizationStatus.ERROR;
 				}
-				if (!res && ret != SynchronizationStatus.ERROR) {
-					//once ERROR status is set, do not check it again
-					ret = (mu != null && mu.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
-				}
-				// save log add member
-				microsoftLoggingRepository.save(MicrosoftLog.builder()
-						.event(MicrosoftLog.EVENT_ADD_MEMBER)
-						.status(res ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
-						.addData("teamId", ss.getTeamId())
-						.addData("memberId", mu != null ? mu.getId() : "null")
-						.build());
 			}
+			//add members to team
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), membersToMicrosoft, ret, new LinkedList<>());
+
+			List<MicrosoftUser> ownersToMicrosoft = new ArrayList<>();
 
 			//process sakai owners not in the team
 			for (String id : filteredSiteMembers.getOwners().keySet()) {
-				boolean res = false;
 				MicrosoftUser mu = null;
 				if (!id.startsWith("EMPTY_")) {
 					mu = microsoftCommonService.getUser(id, mappedMicrosoftUserId);
@@ -713,32 +717,28 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
 						id = sakaiProxy.getMemberKeyValue(sakaiProxy.getUser(u.getId()), mappedSakaiUserId);
 						guestUsers.put(id, mu);
+
+						// save log invitation created
+						microsoftLoggingRepository.save(MicrosoftLog.builder()
+								.event(MicrosoftLog.EVENT_INVITATION_CREATED)
+								.status(MicrosoftLog.Status.OK)
+								.addData("teamId", ss.getTeamId())
+								.addData("userId", u.getId())
+								.build());
+					} else if (ret != SynchronizationStatus.ERROR) {
+						//once ERROR status is set, do not check it again
+						ret = SynchronizationStatus.ERROR_GUEST;
 					}
-					// save log invitation created
-					microsoftLoggingRepository.save(MicrosoftLog.builder()
-							.event(MicrosoftLog.EVENT_INVITATION_CREATED)
-							.status(MicrosoftLog.Status.OK)
-							.addData("teamId", ss.getTeamId())
-							.addData("userId", u.getId())
-							.build());
 				}
 				if (mu != null) {
 					//add to team/group
-					res = addOwnerToMicrosoftGroupOrTeam(ss, mu);
+					ownersToMicrosoft.add(mu);
+				}else {
+					ret = SynchronizationStatus.ERROR;
 				}
-				if (!res && ret != SynchronizationStatus.ERROR) {
-					//once ERROR status is set, do not check it again
-					ret = (mu != null && mu.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
-				}
-
-				// save log add owner
-				microsoftLoggingRepository.save(MicrosoftLog.builder()
-						.event(MicrosoftLog.EVENT_ADD_OWNER)
-						.status(res ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
-						.addData("teamId", ss.getTeamId())
-						.addData("ownerId", mu != null ? mu.getId() : "null")
-						.build());
 			}
+
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), ownersToMicrosoft, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
 
 			//process all group synchronizations related
 			if (ss.getGroupSynchronizationsList() != null && ss.getGroupSynchronizationsList().size() > 0) {
@@ -765,6 +765,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					groupCounter++;
 				}
 			}
+
 		} else {
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_SITE_SYNCRHO_END)
@@ -774,7 +775,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					.addData("forced", Boolean.toString(ss.isForced()))
 					.build());
 		}
-
 		ss.setStatus(ret);
 		ss.setStatusUpdatedAt(ZonedDateTime.now());
 		saveOrUpdateSiteSynchronization(ss);
@@ -979,11 +979,15 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				filteredGroupMembers.getOwnerIds().stream().forEach(id -> log.debug("> {}", id));
 			}
 
+			List<MicrosoftUser> members = new ArrayList<>();
+			List<MicrosoftUser> owners = new ArrayList<>();
+
 			for (String id : filteredGroupMembers.getMemberIds()) {
 				//if guest do not ask to microsoft
 				MicrosoftUser mu = guestUsers.get(id) == null ? microsoftCommonService.getUser(id, mappedMicrosoftUserId) : guestUsers.get(id);
 
 				if (mu != null) {
+					members.add(mu);
 					//user exists -> add to channel
 					//IMPORTANT: all non-existent users in Site, have been invited. So, should be no users in Group that do not exist in Microsoft
 					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
@@ -992,12 +996,14 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					}
 				}
 			}
+			ret = microsoftCommonService.addUsersToChannel(ss, gs, members, ret, new LinkedList<>());
 
 			for (String id : filteredGroupMembers.getOwnerIds()) {
 				//if guest do not ask to microsoft
 				MicrosoftUser mu = guestUsers.get(id) == null ? microsoftCommonService.getUser(id, mappedMicrosoftUserId) : guestUsers.get(id);
 
 				if (mu != null) {
+					owners.add(mu);
 					//user exists -> add to channel
 					//IMPORTANT: all non-existent users in Site, have been invited. So, there are no users in Group that do not exist in Microsoft
 					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
@@ -1006,6 +1012,8 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					}
 				}
 			}
+
+			ret = microsoftCommonService.addUsersToChannel(ss, gs, owners, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
 
 		}
 		gs.setStatus(ret);
