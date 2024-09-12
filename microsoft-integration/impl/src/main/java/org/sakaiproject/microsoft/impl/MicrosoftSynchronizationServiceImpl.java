@@ -987,7 +987,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//user exists -> add to channel
 					//IMPORTANT: all non-existent users in Site, have been invited. So, should be no users in Group that do not exist in Microsoft
 					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
-					if (!addMemberToMicrosoftChannel(ss, gs, mu) && ret.equals(SynchronizationStatus.OK)) {
+					if (!addMemberToMicrosoftChannel(ss, gs, mu) && !ret.equals(SynchronizationStatus.ERROR)) {
 						ret = SynchronizationStatus.ERROR_GUEST;
 					}
 				}
@@ -1001,7 +1001,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					//user exists -> add to channel
 					//IMPORTANT: all non-existent users in Site, have been invited. So, there are no users in Group that do not exist in Microsoft
 					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
-					if (!addOwnerToMicrosoftChannel(ss, gs, mu) && ret.equals(SynchronizationStatus.OK)) {
+					if (!addOwnerToMicrosoftChannel(ss, gs, mu) && !ret.equals(SynchronizationStatus.ERROR)) {
 						ret = SynchronizationStatus.ERROR_GUEST;
 					}
 				}
