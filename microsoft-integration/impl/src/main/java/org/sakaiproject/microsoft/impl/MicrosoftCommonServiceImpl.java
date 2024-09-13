@@ -1035,7 +1035,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		} catch (MicrosoftCredentialsException e) {
 			throw e;
 		} catch (Exception e) {
-			log.debug("Error adding owner userId={} to teamId={}", userId, teamId);
+			log.debug("Error adding member userId={} to teamId={}", userId, teamId);
 			return false;
 		}
 		return true;
@@ -1108,6 +1108,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					//once ERROR status is set, do not check it again
 					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
 				}
+
+				log.debug("Error adding {} userId={} to teamId={}", (roles.contains(MicrosoftUser.OWNER) && !Objects.requireNonNull(pendingMember).isGuest()) ? "owner" : "member", pendingMember.getId(), teamId);
 
 				// save log add member
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
@@ -1766,7 +1768,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	public SynchronizationStatus addUsersToChannel(SiteSynchronization ss, GroupSynchronization gs, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
 		String teamId = ss.getTeamId();
 		String channelId = gs.getChannelId();
-		boolean res = false;
+		boolean generalError = false;
 
 		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).channels(channelId).members()
 				.buildRequest();
@@ -1778,12 +1780,12 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		for (int i = 0; i <= MAX_REQUESTS; i++) {
 			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
 			List<MicrosoftUser> successMembers = new LinkedList<>();
-
+			generalError = false;
 			int retryCount = 0;
 			while (!pendingMembers.isEmpty() && retryCount < MAX_RETRY) {
 				BatchRequestContent batchRequestContent = new BatchRequestContent();
 
-				members.forEach(member -> {
+				pendingMembers.forEach(member -> {
 					ConversationMember memberToAdd = new ConversationMember();
 
 					memberToAdd.oDataType = "#microsoft.graph.aadUserConversationMember";
@@ -1792,23 +1794,35 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 					batchRequestContent.addBatchRequestStep(postMembers, HttpMethod.POST, memberToAdd);
 				});
+				BatchResponseContent responseContent;
 
-				BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+				try {
+					responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+					HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, pendingMembers);
 
-				HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, members);
-
-				successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
-				pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
-				List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
-				handleMicrosoftExceptions(errors);
-				retryCount++;
+					successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
+					pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
+					List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
+					handleMicrosoftExceptions(errors);
+				} catch (GraphServiceException e) {
+					log.debug("Microsoft General error adding members ", e);
+					generalError = true;
+					break;
+				} finally {
+					retryCount++;
+				}
 			}
+
+			if(generalError)
+				continue;
 
 			for (MicrosoftUser pendingMember : pendingMembers) {
 				if (status != SynchronizationStatus.ERROR) {
 					//once ERROR status is set, do not check it again
 					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
 				}
+
+				log.debug("Error adding {} userId={} to teamId={} + channelId={}", (roles.contains(MicrosoftUser.OWNER) && !Objects.requireNonNull(pendingMember).isGuest()) ? "owner" : "member", pendingMember.getId(), teamId, channelId);
 
 				//save log
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
@@ -1849,7 +1863,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 	private void handleMicrosoftExceptions(List<Map<String,?>> errors) {
 		if(!errors.isEmpty()) {
-
 			if(errors.stream().anyMatch(e -> e.containsValue(429))) {
 				Map<String, ?> error = errors.stream().filter(e -> e.containsValue(429)).findFirst().get();
 				microsoftLoggingRepository.save(MicrosoftLog.builder()

@@ -64,7 +64,7 @@
 						</ul>
 					</ul>
 				</div>
-				<p th:if="${errorMembers == null || row.teamId == null || errorMembers[row.teamId] == null}">No users found for this group.</p>
+				<p th:if="${errorMembers == null || row.teamId == null || errorMembers[row.teamId] == null}" th:text="#{error.users_not_found}"></p>
 			</div>
 		</div>
 		<div style="color: orange;" th:case="${T(org.sakaiproject.microsoft.api.data.SynchronizationStatus).KO}" th:text="#{status.KO}" />
@@ -138,7 +138,7 @@
 										</ul>
 								</ul>
 							</div>
-							<p th:if="${errorGroupMembers[grouprow.groupId] == null}">No users found for this group.</p>
+							<p th:if="${errorGroupMembers[grouprow.groupId] == null}" th:text="#{error.users_not_found}"></p>
 						</div>
 					</div>
 				</div>

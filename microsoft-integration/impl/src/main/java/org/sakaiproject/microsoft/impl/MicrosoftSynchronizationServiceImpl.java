@@ -522,9 +522,8 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			return ret;
 		}
 
-		List<MicrosoftLog> microsoftLogs = new ArrayList<>();
 		//save log
-		microsoftLogs.add(MicrosoftLog.builder()
+		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_SITE_SYNCRHO_START)
 				.status(MicrosoftLog.Status.OK)
 				.addData("siteId", ss.getSiteId())
@@ -766,21 +765,13 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				}
 			}
 
-		} else {
-			microsoftLoggingRepository.save(MicrosoftLog.builder()
-					.event(MicrosoftLog.EVENT_SITE_SYNCRHO_END)
-					.status(MicrosoftLog.Status.KO)
-					.addData("siteId", ss.getSiteId())
-					.addData("teamId", ss.getTeamId())
-					.addData("forced", Boolean.toString(ss.isForced()))
-					.build());
 		}
 		ss.setStatus(ret);
 		ss.setStatusUpdatedAt(ZonedDateTime.now());
 		saveOrUpdateSiteSynchronization(ss);
 
 		//save log
-		microsoftLogs.add(MicrosoftLog.builder()
+		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_SITE_SYNCRHO_END)
 				.status((ret == SynchronizationStatus.OK) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
 				.addData("siteId", ss.getSiteId())
@@ -789,8 +780,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				.build());
 
 		// save logs to db
-		microsoftLoggingRepository.save(microsoftLogs);
-
 		return ret;
 	}
 
@@ -988,12 +977,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 				if (mu != null) {
 					members.add(mu);
-					//user exists -> add to channel
-					//IMPORTANT: all non-existent users in Site, have been invited. So, should be no users in Group that do not exist in Microsoft
-					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
-					if (!addMemberToMicrosoftChannel(ss, gs, mu) && !ret.equals(SynchronizationStatus.ERROR)) {
-						ret = SynchronizationStatus.ERROR_GUEST;
-					}
 				}
 			}
 			ret = microsoftCommonService.addUsersToChannel(ss, gs, members, ret, new LinkedList<>());
@@ -1004,12 +987,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 				if (mu != null) {
 					owners.add(mu);
-					//user exists -> add to channel
-					//IMPORTANT: all non-existent users in Site, have been invited. So, there are no users in Group that do not exist in Microsoft
-					//IMPORTANT 2: if user is just added to a group (because is guest/invited), maybe can not be added immediately to a channel
-					if (!addOwnerToMicrosoftChannel(ss, gs, mu) && !ret.equals(SynchronizationStatus.ERROR)) {
-						ret = SynchronizationStatus.ERROR_GUEST;
-					}
 				}
 			}
 
