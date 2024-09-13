@@ -1035,7 +1035,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		} catch (MicrosoftCredentialsException e) {
 			throw e;
 		} catch (Exception e) {
-			log.debug("Error adding owner userId={} to teamId={}", userId, teamId);
+			log.debug("Error adding member userId={} to teamId={}", userId, teamId);
 			return false;
 		}
 		return true;
@@ -1108,6 +1108,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					//once ERROR status is set, do not check it again
 					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
 				}
+
+				log.debug("Error adding {} userId={} to teamId={}", (roles.contains(MicrosoftUser.OWNER) && !Objects.requireNonNull(pendingMember).isGuest()) ? "owner" : "member", pendingMember.getId(), teamId);
 
 				// save log add member
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
@@ -1809,6 +1811,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					//once ERROR status is set, do not check it again
 					status = (pendingMember != null && pendingMember.isGuest()) ? SynchronizationStatus.ERROR_GUEST : SynchronizationStatus.ERROR;
 				}
+
+				log.debug("Error adding {} userId={} to teamId={} + channelId={}", (roles.contains(MicrosoftUser.OWNER) && !Objects.requireNonNull(pendingMember).isGuest()) ? "owner" : "member", pendingMember.getId(), teamId, channelId);
 
 				//save log
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
