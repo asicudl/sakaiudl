@@ -1067,6 +1067,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	public SynchronizationStatus addUsersToTeamOrGroup(String teamId, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
 		boolean res = false;
 		String dataKey = roles.contains(MicrosoftUser.OWNER) ? "ownerId" : "memberId";
+		boolean generalError = false;
 
 		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).members()
 				.buildRequest();
@@ -1078,12 +1079,13 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		for (int i = 0; i <= MAX_REQUESTS; i++) {
 			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
 			List<MicrosoftUser> successMembers = new LinkedList<>();
+			generalError = false;
 
 			int retryCount = 0;
 			while (!pendingMembers.isEmpty() && retryCount < MAX_RETRY) {
 				BatchRequestContent batchRequestContent = new BatchRequestContent();
 
-				members.forEach(member -> {
+				pendingMembers.forEach(member -> {
 					ConversationMember memberToAdd = new ConversationMember();
 
 					memberToAdd.oDataType = "#microsoft.graph.aadUserConversationMember";
@@ -1093,15 +1095,27 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 					batchRequestContent.addBatchRequestStep(postMembers, HttpMethod.POST, memberToAdd);
 				});
 
-				BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
-				HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, members);
+				BatchResponseContent responseContent;
 
-				successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
-				pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
-				List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
-				handleMicrosoftExceptions(errors);
-				retryCount++;
+				try {
+					responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+					HashMap<String, ?> membersResponse = parseBatchResponse(responseContent, pendingMembers);
+
+					successMembers.addAll((List<MicrosoftUser>) membersResponse.get("success"));
+					pendingMembers = (List<MicrosoftUser>) membersResponse.get("failed");
+					List<Map<String, ?>> errors = (List<Map<String, ?>>) membersResponse.get("errors");
+					handleMicrosoftExceptions(errors);
+				} catch (GraphServiceException e) {
+					log.debug("Microsoft General error adding members ", e);
+					generalError = true;
+					break;
+				} finally {
+					retryCount++;
+				}
 			}
+
+			if(generalError)
+				continue;
 
 			for (MicrosoftUser pendingMember : pendingMembers) {
 				if (!res && status != SynchronizationStatus.ERROR) {
