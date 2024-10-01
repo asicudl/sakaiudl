@@ -91,6 +91,7 @@ import com.google.gson.JsonPrimitive;
 
 import com.microsoft.graph.tasks.LargeFileUploadTask;
 import com.microsoft.graph.tasks.LargeFileUploadResult;
+import com.microsoft.graph.models.MeetingChatMode;
 import com.microsoft.graph.models.AadUserConversationMember;
 import com.microsoft.graph.models.CallRecordingEventMessageDetail;
 import com.microsoft.graph.models.CallRecordingStatus;
@@ -1995,7 +1996,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			onlineMeeting.participants = participants;
 			onlineMeeting.subject = subject;
 			onlineMeeting.lobbyBypassSettings = lobbySettings;
-			onlineMeeting.allowedPresenters = OnlineMeetingPresenters.ROLE_IS_PRESENTER;
+			onlineMeeting.allowedPresenters = OnlineMeetingPresenters.ORGANIZER;
+			onlineMeeting.allowMeetingChat = MeetingChatMode.ENABLED;
 
 			OnlineMeeting meeting = getGraphClient().users(organizerUser.getId()).onlineMeetings()
 					.buildRequest()
@@ -2009,7 +2011,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	}
 
 	@Override
-	public void updateOnlineMeeting(String userEmail, String meetingId, String subject, Instant startDate, Instant endDate) throws MicrosoftCredentialsException {
+	public void updateOnlineMeeting(String userEmail, String meetingId, String subject, Instant startDate, Instant endDate, List<String> coorganizerEmails) throws MicrosoftCredentialsException {
 		// Get organizer user
 		MicrosoftUser organizerUser = getUserByEmail(userEmail);
 
@@ -2020,6 +2022,30 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			onlineMeeting.endDateTime = OffsetDateTime.ofInstant(endDate, ZoneId.systemDefault());
 			onlineMeeting.subject = subject;
 
+			MeetingParticipants participants = new MeetingParticipants();
+
+			// Coorganizers
+			List<MeetingParticipantInfo> attendees = new ArrayList<>();
+			if (coorganizerEmails != null) {
+				for (String coorganizerEmail : coorganizerEmails) {
+					if (!coorganizerEmail.equals(organizerUser.getEmail())) {
+						MicrosoftUser coorganizerUser = getUserByEmail(coorganizerEmail);
+						if (coorganizerUser != null) {
+							MeetingParticipantInfo coorganizer = new MeetingParticipantInfo();
+							IdentitySet coorganizerIdentity = new IdentitySet();
+							Identity coorganizerIden = new Identity();
+							coorganizerIden.id = coorganizerUser.getId();
+							coorganizerIden.displayName = coorganizerUser.getName();
+							coorganizerIdentity.user = coorganizerIden;
+							coorganizer.identity = coorganizerIdentity;
+							coorganizer.role = OnlineMeetingRole.COORGANIZER;
+							attendees.add(coorganizer);
+						}
+					}
+				}
+				participants.attendees = attendees;
+			}
+			onlineMeeting.participants = participants;
 			getGraphClient().users(organizerUser.getId()).onlineMeetings(meetingId)
 					.buildRequest()
 					.patch(onlineMeeting);
