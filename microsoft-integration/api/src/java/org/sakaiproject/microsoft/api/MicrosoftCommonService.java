@@ -68,6 +68,8 @@ public interface MicrosoftCommonService {
 	
 	// ---------------------------------------- USERS ------------------------------------------------
 	List<MicrosoftUser> getUsers() throws MicrosoftCredentialsException;
+	List<MicrosoftUser> getUsers(Set<String> strings, MicrosoftUserIdentifier mappedMicrosoftUserId) throws MicrosoftCredentialsException;
+
 	Map<String, Set<User>> getErrorUsers();
 	void addErrorUsers(String id, User user);
 	Map<String, Set<User>> getErrorGroupsUsers();
@@ -76,6 +78,11 @@ public interface MicrosoftCommonService {
 	MicrosoftUser getUser(String identifier, MicrosoftUserIdentifier key) throws MicrosoftCredentialsException;
 	MicrosoftUser getUserById(String id) throws MicrosoftCredentialsException;
 	MicrosoftUser getUserByEmail(String email) throws MicrosoftCredentialsException;
+
+	List<MicrosoftUser> getUsersById(Set<String> userIds) throws MicrosoftCredentialsException;
+
+	List<MicrosoftUser> getUsersByEmail(Set<String> userEmails) throws MicrosoftCredentialsException;
+
 
 	void clearErrorGroupsUsers(String id);
 

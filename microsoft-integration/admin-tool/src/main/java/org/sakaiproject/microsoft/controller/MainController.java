@@ -21,6 +21,7 @@ import org.sakaiproject.microsoft.api.MicrosoftCommonService;
 import org.sakaiproject.microsoft.api.MicrosoftConfigurationService;
 import org.sakaiproject.microsoft.api.MicrosoftSynchronizationService;
 import org.sakaiproject.microsoft.api.SakaiProxy;
+import org.sakaiproject.microsoft.api.data.MicrosoftLogInvokers;
 import org.sakaiproject.microsoft.api.data.MicrosoftTeam;
 import org.sakaiproject.microsoft.api.data.SakaiSiteFilter;
 import org.sakaiproject.microsoft.api.data.SynchronizationStatus;
@@ -31,6 +32,7 @@ import org.sakaiproject.microsoft.controller.auxiliar.AjaxResponse;
 import org.sakaiproject.microsoft.controller.auxiliar.FilterRequest;
 import org.sakaiproject.microsoft.controller.auxiliar.MainSessionBean;
 import org.sakaiproject.site.api.Group;
+import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.util.ResourceLoader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -91,6 +93,8 @@ public class MainController {
 
 	@GetMapping(value = {"/", "/index"})
 	public String index(Model model) {
+		Session session = sakaiProxy.getCurrentSession();
+		session.setAttribute("origin", MicrosoftLogInvokers.MANUAL.getCode());
 
 		return INDEX_TEMPLATE;
 	}

@@ -182,6 +182,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_CREATE_TEAM_FROM_GROUP)
 						.status(MicrosoftLog.Status.KO)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("groupId", teamId)
 						.build());
 			}
@@ -332,6 +333,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_ALL_USERS_REMOVED_FROM_TEAM)
 					.status((ok) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("siteId", ss.getSiteId())
 					.addData("teamId", ss.getTeamId())
 					.build());
@@ -404,6 +406,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					.addData("owner", Boolean.FALSE.toString());
 		}
 		builder.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -430,6 +433,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					.addData("owner", Boolean.TRUE.toString());
 		}
 		builder.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -447,6 +451,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_USER_REMOVED_FROM_TEAM)
 				.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -482,6 +487,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_INVITATION_SENT)
 						.status((mu != null) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("email", (u != null) ? u.getEmail() : "-null-")
 						.addData("microsoftUserId", (mu != null) ? mu.getId() : "-null-")
 						.addData("siteId", ss.getSiteId())
@@ -492,6 +498,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_INVITATION_NOT_SENT)
 						.status(MicrosoftLog.Status.OK)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("email", (u != null) ? u.getEmail() : "-null-")
 						.addData("siteId", ss.getSiteId())
 						.addData("teamId", ss.getTeamId())
@@ -502,6 +509,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.ERROR_INVITATION)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("email", (u != null) ? u.getEmail() : "-null-")
 					.addData("siteId", ss.getSiteId())
 					.addData("teamId", ss.getTeamId())
@@ -526,6 +534,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_SITE_SYNCRHO_START)
 				.status(MicrosoftLog.Status.OK)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("siteId", ss.getSiteId())
 				.addData("teamId", ss.getTeamId())
 				.addData("forced", Boolean.toString(ss.isForced()))
@@ -542,7 +551,6 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 
 			//get site users that are not in team
 			filteredSiteMembers = siteMembers.diffWith(teamMembers);
-
 
 			if (log.isDebugEnabled()) {
 				log.debug("diff members...");
@@ -574,6 +582,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 							microsoftLoggingRepository.save(MicrosoftLog.builder()
 									.event(MicrosoftLog.EVENT_REACH_MAX_CHANNELS)
 									.status((ret == SynchronizationStatus.OK) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+									.addData("origin", sakaiProxy.getActionOrigin())
 									.addData("teamId", ss.getTeamId())
 									.addData("groups", ss.getSite().getGroups().toString())
 									.build());
@@ -609,6 +618,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					microsoftLoggingRepository.save(MicrosoftLog.builder()
 							.event(MicrosoftLog.EVENT_REMOVE_MEMBER)
 							.status(res ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+							.addData("origin", sakaiProxy.getActionOrigin())
 							.addData("teamId", ss.getTeamId())
 							.addData("memberId", mu.getId())
 							.build());
@@ -628,6 +638,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						microsoftLoggingRepository.save(MicrosoftLog.builder()
 								.event(MicrosoftLog.EVENT_REMOVE_OWNER)
 								.status(res ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+								.addData("origin", sakaiProxy.getActionOrigin())
 								.addData("teamId", ss.getTeamId())
 								.addData("ownerId", mu.getId())
 								.build());
@@ -647,6 +658,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					microsoftLoggingRepository.save(MicrosoftLog.builder()
 							.event(MicrosoftLog.EVENT_REMOVE_GUEST)
 							.status(res ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+							.addData("origin", sakaiProxy.getActionOrigin())
 							.addData("teamId", ss.getTeamId())
 							.addData("guestId", mu.getId())
 							.build());
@@ -656,88 +668,80 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			Map<String, MicrosoftUser> guestUsers = new HashMap<>();
 
 			//microsoftCommonService.getUsers();
-			List<MicrosoftUser> membersToMicrosoft = new ArrayList<>();
+
+			List<MicrosoftUser> filteredMembersFound = microsoftCommonService.getUsers(filteredSiteMembers.getMembers().keySet(), mappedMicrosoftUserId);
+			List<String> filteredMembersNotFound = filteredSiteMembers.getMembers().keySet().stream().filter(id -> filteredMembersFound.stream().noneMatch(mu -> mu != null && mu.getEmail().equalsIgnoreCase(id))).collect(Collectors.toList());
 
 			//process sakai members not in the team
-			for (String id : filteredSiteMembers.getMembers().keySet()) {
-				MicrosoftUser mu = null;
-				//if ID is NOT empty. (can be empty if user property does not exist or is blank)
-				if (!id.startsWith("EMPTY_")) {
-					mu = microsoftCommonService.getUser(id, mappedMicrosoftUserId);
-				}
-				if (mu == null) {
-					//user does not exist -> create invitation
-					User u = (User) filteredSiteMembers.getMembers().get(id);
-					mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
-					microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
+			for (String id : filteredMembersNotFound) {
+				//user does not exist -> create invitation
+				User u = (User) filteredSiteMembers.getMembers().get(id);
+				MicrosoftUser mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
+				microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
 
-					if (mu != null) {
-						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
-						id = sakaiProxy.getMemberKeyValue(sakaiProxy.getUser(u.getId()), mappedSakaiUserId);
-						guestUsers.put(id, mu);
+				if (mu != null) {
+					//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
+					id = sakaiProxy.getMemberKeyValue(sakaiProxy.getUser(u.getId()), mappedSakaiUserId);
+					guestUsers.put(id, mu);
 
-						// save log invitation created
-						microsoftLoggingRepository.save(MicrosoftLog.builder()
-								.event(MicrosoftLog.EVENT_INVITATION_CREATED)
-								.status(MicrosoftLog.Status.OK)
-								.addData("teamId", ss.getTeamId())
-								.addData("userId", u.getId())
-								.build());
-					} else if (ret != SynchronizationStatus.ERROR) {
-						//once ERROR status is set, do not check it again
-						ret = SynchronizationStatus.ERROR_GUEST;
-					}
+					// save log invitation created
+					microsoftLoggingRepository.save(MicrosoftLog.builder()
+							.event(MicrosoftLog.EVENT_INVITATION_CREATED)
+							.status(MicrosoftLog.Status.OK)
+							.addData("origin", sakaiProxy.getActionOrigin())
+							.addData("teamId", ss.getTeamId())
+							.addData("userId", u.getId())
+							.build());
+				} else if (ret != SynchronizationStatus.ERROR) {
+					//once ERROR status is set, do not check it again
+					ret = SynchronizationStatus.ERROR_GUEST;
 				}
 				if (mu != null) {
 					//add to team/group
-					membersToMicrosoft.add(mu);
+					filteredMembersFound.add(mu);
 				} else {
 					ret = SynchronizationStatus.ERROR;
 				}
 			}
 			//add members to team
-			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), membersToMicrosoft, ret, new LinkedList<>());
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), filteredMembersFound, ret, new LinkedList<>());
 
-			List<MicrosoftUser> ownersToMicrosoft = new ArrayList<>();
+			List<MicrosoftUser> filteredOwnersFound = microsoftCommonService.getUsers(filteredSiteMembers.getOwners().keySet(), mappedMicrosoftUserId);
+			List<String> filteredOwnersNotFound = filteredSiteMembers.getOwners().keySet().stream().filter(id -> filteredOwnersFound.stream().noneMatch(mu -> mu != null && mu.getEmail().equalsIgnoreCase(id))).collect(Collectors.toList());
 
 			//process sakai owners not in the team
-			for (String id : filteredSiteMembers.getOwners().keySet()) {
-				MicrosoftUser mu = null;
-				if (!id.startsWith("EMPTY_")) {
-					mu = microsoftCommonService.getUser(id, mappedMicrosoftUserId);
-				}
-				if (mu == null) {
-					//user does not exist -> create invitation
-					User u = (User) filteredSiteMembers.getOwners().get(id);
-					mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
-					microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
+			for (String id : filteredOwnersNotFound) {
+				//user does not exist -> create invitation
+				User u = (User) filteredSiteMembers.getOwners().get(id);
+				MicrosoftUser mu = createInvitation(ss, u, mappedSakaiUserId, mappedMicrosoftUserId);
+				microsoftCommonService.addErrorUsers(ss.getTeamId(), u);
 
-					if (mu != null) {
-						//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
-						id = sakaiProxy.getMemberKeyValue(sakaiProxy.getUser(u.getId()), mappedSakaiUserId);
-						guestUsers.put(id, mu);
+				if (mu != null) {
+					//store newly invited user in getsUsers map -> used in group synch in case this user do not appear yet in Microsoft registers
+					id = sakaiProxy.getMemberKeyValue(sakaiProxy.getUser(u.getId()), mappedSakaiUserId);
+					guestUsers.put(id, mu);
 
-						// save log invitation created
-						microsoftLoggingRepository.save(MicrosoftLog.builder()
-								.event(MicrosoftLog.EVENT_INVITATION_CREATED)
-								.status(MicrosoftLog.Status.OK)
-								.addData("teamId", ss.getTeamId())
-								.addData("userId", u.getId())
-								.build());
-					} else if (ret != SynchronizationStatus.ERROR) {
-						//once ERROR status is set, do not check it again
-						ret = SynchronizationStatus.ERROR_GUEST;
-					}
+					// save log invitation created
+					microsoftLoggingRepository.save(MicrosoftLog.builder()
+							.event(MicrosoftLog.EVENT_INVITATION_CREATED)
+							.status(MicrosoftLog.Status.OK)
+							.addData("origin", sakaiProxy.getActionOrigin())
+							.addData("teamId", ss.getTeamId())
+							.addData("userId", u.getId())
+							.build());
+				} else if (ret != SynchronizationStatus.ERROR) {
+					//once ERROR status is set, do not check it again
+					ret = SynchronizationStatus.ERROR_GUEST;
 				}
 				if (mu != null) {
 					//add to team/group
-					ownersToMicrosoft.add(mu);
-				}else {
+					filteredOwnersFound.add(mu);
+				} else {
 					ret = SynchronizationStatus.ERROR;
 				}
 			}
 
-			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), ownersToMicrosoft, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), filteredOwnersFound, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
 
 			//process all group synchronizations related
 			if (ss.getGroupSynchronizationsList() != null && ss.getGroupSynchronizationsList().size() > 0) {
@@ -757,6 +761,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						microsoftLoggingRepository.save(MicrosoftLog.builder()
 								.event(MicrosoftLog.EVENT_GROUP_SYNCHRONIZATION)
 								.status((aux_status == SynchronizationStatus.OK) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+								.addData("origin", sakaiProxy.getActionOrigin())
 								.addData("teamId", ss.getTeamId())
 								.addData("groupId", gs.getGroupId())
 								.build());
@@ -774,6 +779,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_SITE_SYNCRHO_END)
 				.status((ret == SynchronizationStatus.OK) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("siteId", ss.getSiteId())
 				.addData("teamId", ss.getTeamId())
 				.addData("forced", Boolean.toString(ss.isForced()))
@@ -874,6 +880,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
 				.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -895,6 +902,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
 				.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -916,6 +924,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 		microsoftLoggingRepository.save(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_USER_REMOVED_FROM_CHANNEL)
 				.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", sakaiProxy.getActionOrigin())
 				.addData("email", mu.getEmail())
 				.addData("microsoftUserId", mu.getId())
 				.addData("siteId", ss.getSiteId())
@@ -1101,6 +1110,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			MicrosoftLogBuilder builder = MicrosoftLog.builder();
 			builder.event(MicrosoftLog.ERROR_ELEMENT_CREATED)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("type", msg.getType().name())
 					.addData("siteId", msg.getSiteId());
 			if (msg.getType() == MicrosoftMessage.Type.GROUP) {
@@ -1160,6 +1170,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_SITE_CREATED)
 					.status((teamId != null) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("siteId", siteId)
 					.addData("teamId", (teamId != null) ? teamId : "-null-")
 					.build());
@@ -1219,6 +1230,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 											microsoftLoggingRepository.save(MicrosoftLog.builder()
 													.event(MicrosoftLog.EVENT_CHANNEL_CREATED)
 													.status(MicrosoftLog.Status.OK)
+													.addData("origin", sakaiProxy.getActionOrigin())
 													.addData("siteId", siteId)
 													.addData("teamId", ss.getTeamId())
 													.addData("groupId", groupId)
@@ -1239,6 +1251,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_GROUP_CREATED)
 						.status((channelId != null) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("siteId", siteId)
 						.addData("groupId", groupId)
 						.build());
@@ -1266,6 +1279,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			MicrosoftLogBuilder builder = MicrosoftLog.builder();
 			builder.event(MicrosoftLog.ERROR_ELEMENT_DELETED)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("type", msg.getType().name())
 					.addData("siteId", msg.getSiteId());
 			if (msg.getType() == MicrosoftMessage.Type.GROUP) {
@@ -1298,6 +1312,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_SITE_DELETED)
 					.status(MicrosoftLog.Status.OK)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("siteId", siteId)
 					.build());
 		}
@@ -1322,6 +1337,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_GROUP_DELETED)
 					.status(MicrosoftLog.Status.OK)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("siteId", siteId)
 					.addData("groupId", groupId)
 					.build());
@@ -1339,6 +1355,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			MicrosoftLogBuilder builder = MicrosoftLog.builder();
 			builder.event(MicrosoftLog.ERROR_ELEMENT_MODIFIED)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("type", msg.getType().name())
 					.addData("action", msg.getAction().name())
 					.addData("siteId", msg.getSiteId());
@@ -1383,6 +1400,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_SITE_UNPUBLISHED)
 					.status((end) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("siteId", siteId)
 					.build());
 		}
@@ -1409,6 +1427,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			MicrosoftLogBuilder builder = MicrosoftLog.builder();
 			builder.event(MicrosoftLog.ERROR_USER_ADDED_TO_AUTHZGROUP)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("type", msg.getType().name())
 					.addData("userId", msg.getUserId())
 					.addData("siteId", msg.getSiteId())
@@ -1479,6 +1498,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 					microsoftLoggingRepository.save(MicrosoftLog.builder()
 							.event(MicrosoftLog.EVENT_USER_ADDED_TO_SITE)
 							.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+							.addData("origin", sakaiProxy.getActionOrigin())
 							.addData("email", (user != null) ? user.getEmail() : "-null-")
 							.addData("sakaiUserId", (user != null) ? user.getId() : "-null-")
 							.addData("microsoftUserId", (mu != null) ? mu.getId() : "-null-")
@@ -1539,6 +1559,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						microsoftLoggingRepository.save(MicrosoftLog.builder()
 								.event(MicrosoftLog.EVENT_USER_ADDED_TO_GROUP)
 								.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+								.addData("origin", sakaiProxy.getActionOrigin())
 								.addData("email", (user != null) ? user.getEmail() : "-null-")
 								.addData("sakaiUserId", (user != null) ? user.getId() : "-null-")
 								.addData("microsoftUserId", (mu != null) ? mu.getId() : "-null-")
@@ -1588,6 +1609,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			MicrosoftLogBuilder builder = MicrosoftLog.builder();
 			builder.event(MicrosoftLog.ERROR_USER_REMOVED_FROM_AUTHZGROUP)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("type", msg.getType().name())
 					.addData("action", msg.getAction().name())
 					.addData("userId", msg.getUserId())
@@ -1642,6 +1664,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						microsoftLoggingRepository.save(MicrosoftLog.builder()
 								.event(MicrosoftLog.EVENT_USER_REMOVED_FROM_SITE)
 								.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+								.addData("origin", sakaiProxy.getActionOrigin())
 								.addData("email", (user != null) ? user.getEmail() : "-null-")
 								.addData("sakaiUserId", (user != null) ? user.getId() : "-null-")
 								.addData("microsoftUserId", (mu != null) ? mu.getId() : "-null-")
@@ -1702,6 +1725,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 						microsoftLoggingRepository.save(MicrosoftLog.builder()
 								.event(MicrosoftLog.EVENT_USER_REMOVED_FROM_GROUP)
 								.status((res) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+								.addData("origin", sakaiProxy.getActionOrigin())
 								.addData("email", (user != null) ? user.getEmail() : "-null-")
 								.addData("sakaiUserId", (user != null) ? user.getId() : "-null-")
 								.addData("microsoftUserId", (mu != null) ? mu.getId() : "-null-")
@@ -1751,6 +1775,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 			microsoftLoggingRepository.save(MicrosoftLog.builder()
 					.event(MicrosoftLog.EVENT_CREATE_TEAM_FROM_GROUP)
 					.status((msg.getStatus() == 1) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+					.addData("origin", sakaiProxy.getActionOrigin())
 					.addData("groupId", msg.getReference())
 					.build());
 		}

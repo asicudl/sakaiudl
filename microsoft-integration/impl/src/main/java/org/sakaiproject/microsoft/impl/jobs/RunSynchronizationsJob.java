@@ -23,6 +23,7 @@ import org.quartz.JobExecutionException;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.microsoft.api.MicrosoftConfigurationService;
 import org.sakaiproject.microsoft.api.MicrosoftSynchronizationService;
+import org.sakaiproject.microsoft.api.data.MicrosoftLogInvokers;
 import org.sakaiproject.microsoft.api.data.SakaiSiteFilter;
 import org.sakaiproject.microsoft.api.data.SynchronizationStatus;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftGenericException;
@@ -59,6 +60,7 @@ public class RunSynchronizationsJob implements Job {
 		try {
 			session.setUserEid("admin");
 			session.setUserId("admin");
+			session.setAttribute("origin", MicrosoftLogInvokers.JOB.getCode());
 			SakaiSiteFilter siteFilter = microsoftConfigurationService.getJobSiteFilter();
 			
 			List<SiteSynchronization> list = microsoftSynchronizationService.getAllSiteSynchronizations(true);

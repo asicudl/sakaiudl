@@ -27,6 +27,7 @@ import org.sakaiproject.microsoft.api.data.AutoConfigProcessStatus;
 import org.sakaiproject.microsoft.api.data.CreationStatus;
 import org.sakaiproject.microsoft.api.data.MicrosoftChannel;
 import org.sakaiproject.microsoft.api.data.MicrosoftCredentials;
+import org.sakaiproject.microsoft.api.data.MicrosoftLogInvokers;
 import org.sakaiproject.microsoft.api.data.MicrosoftTeam;
 import org.sakaiproject.microsoft.api.data.SynchronizationStatus;
 import org.sakaiproject.microsoft.api.model.GroupSynchronization;
@@ -300,6 +301,7 @@ public class AutoConfigController {
 			microsoftLoggingService.saveLog(MicrosoftLog.builder()
 					.event(MicrosoftLog.ERROR_TEAM_ID_NULL)
 					.status(MicrosoftLog.Status.KO)
+					.addData("origin", MicrosoftLogInvokers.MANUAL.getCode())
 					.addData("teamId", teamId)
 					.addData("siteId", site.getId())
 					.addData("siteTitle", site.getTitle())
@@ -311,6 +313,7 @@ public class AutoConfigController {
 		microsoftLoggingService.saveLog(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_CREATE_TEAM_FROM_SITE)
 				.status(MicrosoftLog.Status.OK)
+				.addData("origin", MicrosoftLogInvokers.MANUAL.getCode())
 				.addData("siteId", site.getId())
 				.addData("siteTitle", site.getTitle())
 				.addData("teamId", teamId)
@@ -360,6 +363,7 @@ public class AutoConfigController {
 		microsoftLoggingService.saveLog(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_CHANNEL_PRESENT_ON_GROUP)
 				.status(MicrosoftLog.Status.OK)
+				.addData("origin", MicrosoftLogInvokers.MANUAL.getCode())
 				.addData("siteId", site.getId())
 				.addData("siteTitle", site.getTitle())
 				.addData("processGroupsIds", groupsIds)
@@ -380,6 +384,7 @@ public class AutoConfigController {
 		microsoftLoggingService.saveLog(MicrosoftLog.builder()
 				.event(MicrosoftLog.BINDING_TEAM_FROM_SITE)
 				.status(!site.getId().isBlank() ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+				.addData("origin", MicrosoftLogInvokers.MANUAL.getCode())
 				.addData("siteId", site.getId())
 				.addData("siteTitle", site.getTitle())
 				.addData("teamId", ss.getTeamId())
@@ -447,6 +452,7 @@ public class AutoConfigController {
 		microsoftLoggingService.saveLog(MicrosoftLog.builder()
 				.event(MicrosoftLog.EVENT_CHANNEL_PRESENT_ON_GROUP)
 				.status(MicrosoftLog.Status.OK)
+				.addData("origin", MicrosoftLogInvokers.MANUAL.getCode())
 				.addData("siteId", site.getId())
 				.addData("siteTitle", site.getTitle())
 				.addData("processGroupsIds", groupsIds)

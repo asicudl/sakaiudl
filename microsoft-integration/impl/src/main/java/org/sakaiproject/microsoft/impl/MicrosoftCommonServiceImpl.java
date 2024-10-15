@@ -25,7 +25,6 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -43,11 +42,13 @@ import java.util.stream.Collectors;
 
 import com.microsoft.graph.content.BatchRequestContent;
 import com.microsoft.graph.content.BatchResponseContent;
+import com.microsoft.graph.content.BatchResponseStep;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.http.HttpMethod;
 import com.microsoft.graph.options.QueryOption;
 import com.microsoft.graph.requests.ConversationMemberCollectionRequest;
 import com.microsoft.graph.requests.GroupRequest;
+import com.microsoft.graph.requests.UserCollectionRequest;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -399,6 +400,126 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			log.debug("Microsoft User not found with email={}", email);
 		}
 		return null;
+	}
+
+	@Override
+	public List<MicrosoftUser> getUsersById(Set<String> userIds) throws MicrosoftCredentialsException {
+		List<MicrosoftUser> users = new ArrayList<>();
+
+		//get from cache
+		Map<String, MicrosoftUser> usersMap = new HashMap<>();
+		Cache.ValueWrapper cachedValue = getCache().get(CACHE_USERS);
+		if (cachedValue != null) {
+			usersMap = (Map<String, MicrosoftUser>) cachedValue.get();
+			for (MicrosoftUser user : usersMap.values()) {
+				if (userIds.contains(user.getId().toLowerCase())) {
+					users.add(user);
+				}
+			}
+		}
+
+		final int MAX_LENGTH = 20;
+		int pointer = 0;
+		LinkedList<Option> requestOptions = new LinkedList<Option>();
+		requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
+		requestOptions.add(new QueryOption("$select", "id,displayName,mail,userType"));
+
+		GraphServiceClient graph = getGraphClient();
+		Set<String> pendingUsers = userIds.stream().filter(id -> !id.startsWith("EMPTY_") && users.stream().noneMatch(u -> u.getId().equalsIgnoreCase(id))).collect(Collectors.toSet());
+		List<String> usersToProcess;
+		//sometimes microsoft fails creating -> loop for retry failed ones
+		while (!pendingUsers.isEmpty()) {
+			usersToProcess = pendingUsers.stream().skip(pointer).limit(MAX_LENGTH).collect(Collectors.toList());
+
+			BatchRequestContent batchRequestContent = new BatchRequestContent();
+
+			usersToProcess.forEach(id -> {
+				UserCollectionRequest getUsers = graph.users()
+						.buildRequest(requestOptions)
+						.filter("userId eq '" + id + "'");
+
+				batchRequestContent.addBatchRequestStep(getUsers, HttpMethod.GET);
+			});
+
+			BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+
+			HashMap<String, ?> teamsResponse = parseBatchResponse(responseContent, usersToProcess);
+
+			users.addAll((List<MicrosoftUser>) teamsResponse.get("success"));
+			pendingUsers.removeAll(usersToProcess);
+		}
+
+		//store in cache
+		usersMap.putAll(users.stream().collect(Collectors.toMap(MicrosoftUser::getId, u -> u)));
+		getCache().put(CACHE_USERS, usersMap);
+
+		return users;
+	}
+
+	@Override
+	public List<MicrosoftUser> getUsers(Set<String> ids, MicrosoftUserIdentifier mappedMicrosoftUserId) throws MicrosoftCredentialsException {
+		switch (mappedMicrosoftUserId) {
+			case USER_ID:
+				return getUsersById(ids);
+			case EMAIL:
+				return getUsersByEmail(ids);
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public List<MicrosoftUser> getUsersByEmail(Set<String> userEmails) throws MicrosoftCredentialsException {
+		List<MicrosoftUser> users = new ArrayList<>();
+
+		//get from cache
+		Map<String, MicrosoftUser> usersMap = new HashMap<>();
+		Cache.ValueWrapper cachedValue = getCache().get(CACHE_USERS);
+		if (cachedValue != null) {
+			usersMap = (Map<String, MicrosoftUser>) cachedValue.get();
+			for (MicrosoftUser user : usersMap.values()) {
+				if (userEmails.contains(user.getEmail().toLowerCase())) {
+					users.add(user);
+				}
+			}
+		}
+
+		final int MAX_LENGTH = 20;
+		int pointer = 0;
+		LinkedList<Option> requestOptions = new LinkedList<Option>();
+		requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
+		requestOptions.add(new QueryOption("$select", "id,displayName,mail,userType"));
+
+		GraphServiceClient graph = getGraphClient();
+		Set<String> pendingUsers = userEmails.stream().filter(email -> !email.startsWith("EMPTY_") && users.stream().noneMatch(u -> u.getEmail().equalsIgnoreCase(email))).collect(Collectors.toSet());
+		List<String> usersToProcess;
+		//sometimes microsoft fails creating -> loop for retry failed ones
+		while (!pendingUsers.isEmpty()) {
+			usersToProcess = pendingUsers.stream().skip(pointer).limit(MAX_LENGTH).collect(Collectors.toList());
+
+			BatchRequestContent batchRequestContent = new BatchRequestContent();
+
+			usersToProcess.forEach(email -> {
+				UserCollectionRequest getUsers = graph.users()
+						.buildRequest(requestOptions)
+						.filter("mail eq '" + email + "'");
+
+				batchRequestContent.addBatchRequestStep(getUsers, HttpMethod.GET);
+			});
+
+			BatchResponseContent responseContent = getGraphClient().batch().buildRequest().post(batchRequestContent);
+
+			HashMap<String, ?> teamsResponse = parseBatchResponse(responseContent, usersToProcess);
+
+			users.addAll((List<MicrosoftUser>) teamsResponse.get("success"));
+			pendingUsers.removeAll(usersToProcess);
+		}
+
+		//store in cache
+		usersMap.putAll(users.stream().collect(Collectors.toMap(MicrosoftUser::getId, u -> u)));
+		getCache().put(CACHE_USERS, usersMap);
+
+		return users;
 	}
 
 	@Override
@@ -1130,6 +1251,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_ADD_MEMBER)
 						.status((pendingMember != null && pendingMember.isGuest()) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("teamId", teamId)
 						.addData(dataKey, pendingMember != null ? pendingMember.getId() : "null")
 						.build());
@@ -1141,6 +1263,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_ADD_MEMBER)
 						.status(MicrosoftLog.Status.OK)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("teamId", teamId)
 						.addData(dataKey, member.getId())
 						.build());
@@ -1472,6 +1595,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			case "SiteSynchronization":
 				resultMap = parseBatchResponseToMicrosoftTeam(responseContent, listToProcess);
 				break;
+			case "String":
+				resultMap = parseBatchResponseToMicrosoftUserFromStringList(responseContent,(List<String>) listToProcess);
+				break;
 		}
 
 		return resultMap;
@@ -1519,6 +1645,64 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 		responseMap.put("success", new ArrayList<>(successRequests.values()));
 		responseMap.put("failed", pendingRequests);
+		responseMap.put("errors", errors);
+
+		return responseMap;
+	}
+
+
+	private HashMap<String,?> parseBatchResponseToMicrosoftUserFromStringList(BatchResponseContent responseContent, List<String> listToProcess) {
+		HashMap<String, Object> responseMap = new HashMap<>();
+
+		List<BatchResponseStep<JsonElement>> nonEmptyResponses = responseContent.responses.stream()
+				.filter(r -> r.status <= 299)
+				.collect(Collectors.toList())
+				.stream().filter(r -> !r.body.getAsJsonObject().get("value").getAsJsonArray().isEmpty())
+				.collect(Collectors.toList());
+
+		Map<String, MicrosoftUser> successRequests =
+				nonEmptyResponses
+						.stream().map(r -> {
+							Map.Entry<String, MicrosoftUser> entry = new AbstractMap.SimpleEntry<>(
+									r.body.getAsJsonObject().get("value").getAsJsonArray().get(0).getAsJsonObject().get("id").getAsString(),
+									MicrosoftUser.builder()
+											.id(r.body.getAsJsonObject().get("value").getAsJsonArray().get(0).getAsJsonObject().get("id").getAsString())
+											.email(r.body.getAsJsonObject().get("value").getAsJsonArray().get(0).getAsJsonObject().get("mail").getAsString())
+											.build()
+							);
+							return entry;
+						}).collect(Collectors.toMap(
+								Map.Entry::getKey,
+								Map.Entry::getValue
+						));
+
+		List<String> notFoundUsers =
+				listToProcess.stream()
+						.filter(email -> successRequests.entrySet().stream().noneMatch(r -> r.getValue().getEmail().equalsIgnoreCase(email)))
+						.collect(Collectors.toList());
+
+		List<Map<String, ?>> errors = responseContent.responses.stream()
+				.filter(r -> r.status > 299)
+				.map(r -> {
+					String code, innerError;
+					try {
+						code = r.body.getAsJsonObject().get("error").getAsJsonObject().get("code").getAsString();
+						innerError = r.body.getAsJsonObject().get("error").getAsJsonObject().get("innerError").getAsJsonObject().get("code").getAsString();
+					} catch (Exception e) {
+						code = "Failure";
+						innerError = "Failure";
+					}
+					return Map.of(
+							"status", r.status,
+							"retryAfter", r.headers.containsKey("Retry-After") ? r.headers.get("Retry-After") : 5,
+							"code", code,
+							"innerError", innerError);
+				})
+				.collect(Collectors.toList());
+
+
+		responseMap.put("success", new ArrayList<>(successRequests.values()));
+		responseMap.put("failed", notFoundUsers);
 		responseMap.put("errors", errors);
 
 		return responseMap;
@@ -1843,6 +2027,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
 						.status(MicrosoftLog.Status.KO)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("email", pendingMember.getEmail())
 						.addData("microsoftUserId", pendingMember.getId())
 						.addData("siteId", ss.getSiteId())
@@ -1860,6 +2045,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_USER_ADDED_TO_CHANNEL)
 						.status(MicrosoftLog.Status.OK)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("email", member.getEmail())
 						.addData("microsoftUserId", member.getId())
 						.addData("siteId", ss.getSiteId())
@@ -1882,6 +2068,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				Map<String, ?> error = errors.stream().filter(e -> e.containsValue(429)).findFirst().get();
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_TOO_MANY_REQUESTS)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("Status", error.get("status").toString())
 						.addData("Code", error.get("code").toString())
 						.addData("RetryAfter", error.get("retryAfter").toString())
@@ -1897,6 +2084,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 				Map<String, ?> error = errors.stream().filter(e -> e.containsValue(404)).findFirst().get();
 				microsoftLoggingRepository.save(MicrosoftLog.builder()
 						.event(MicrosoftLog.EVENT_USER_NOT_FOUND_ON_TEAM)
+						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("Status", error.get("status").toString())
 						.addData("Code", error.get("code").toString())
 						.addData("RetryAfter", error.get("retryAfter").toString())
