@@ -704,7 +704,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				}
 			}
 			//add members to team
-			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), filteredMembersFound, ret, new LinkedList<>());
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss, filteredMembersFound, ret, new LinkedList<>());
 
 			List<MicrosoftUser> filteredOwnersFound = microsoftCommonService.getUsers(filteredSiteMembers.getOwners().keySet(), mappedMicrosoftUserId);
 			List<String> filteredOwnersNotFound = filteredSiteMembers.getOwners().keySet().stream().filter(id -> filteredOwnersFound.stream().noneMatch(mu -> mu != null && mu.getEmail().equalsIgnoreCase(id))).collect(Collectors.toList());
@@ -741,7 +741,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				}
 			}
 
-			ret = microsoftCommonService.addUsersToTeamOrGroup(ss.getTeamId(), filteredOwnersFound, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
+			ret = microsoftCommonService.addUsersToTeamOrGroup(ss, filteredOwnersFound, ret, new LinkedList<>(Collections.singletonList(MicrosoftUser.OWNER)));
 
 			//process all group synchronizations related
 			if (ss.getGroupSynchronizationsList() != null && ss.getGroupSynchronizationsList().size() > 0) {
@@ -1141,7 +1141,7 @@ public class MicrosoftSynchronizationServiceImpl implements MicrosoftSynchroniza
 				if (site != null) {
 					//check filters
 					if (!siteFilter.match(site)) {
-						break;
+						return;
 					}
 
 					teamId = microsoftCommonService.createTeam(site.getTitle(), credentials.getEmail());

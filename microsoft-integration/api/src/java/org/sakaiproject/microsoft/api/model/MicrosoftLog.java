@@ -102,7 +102,9 @@ public class MicrosoftLog {
 	public static final String EVENT_TOO_MANY_REQUESTS = "event.too_many_requests";
 	public static final String EVENT_USER_NOT_FOUND_ON_TEAM = "event.user_not_found_on_team";
 
+	public static final String EVENT_JOB_RESULT = "event.job_result";
 
+	public static final String[] MICROSOFT_ERRORS = {EVENT_TOO_MANY_REQUESTS};
 
 	public enum Status {
 		KO, OK

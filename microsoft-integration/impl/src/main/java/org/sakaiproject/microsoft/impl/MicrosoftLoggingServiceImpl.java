@@ -23,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
+import java.time.ZonedDateTime;
+import java.util.List;
+
 @Log4j2
 @Transactional
 public class MicrosoftLoggingServiceImpl implements MicrosoftLoggingService {
@@ -35,6 +38,15 @@ public class MicrosoftLoggingServiceImpl implements MicrosoftLoggingService {
 	public void saveLog(MicrosoftLog log) {
 		microsoftLoggingRepository.save(log);
 	}
-	
+
+	@Override
+	public List<MicrosoftLog> findAll() {
+		return (List<MicrosoftLog>) microsoftLoggingRepository.findAll();
+	}
+
+	@Override
+	public List<MicrosoftLog> findFromZonedDateTime(ZonedDateTime zonedDateTime) {
+		return (List<MicrosoftLog>) microsoftLoggingRepository.getLogsFromZonedDateTime(zonedDateTime);
+	}
 	
 }

@@ -1186,8 +1186,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	}
 
 	@Override
-	public SynchronizationStatus addUsersToTeamOrGroup(String teamId, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
+	public SynchronizationStatus addUsersToTeamOrGroup(SiteSynchronization ss, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException {
 		boolean res = false;
+		String teamId = ss.getTeamId();
 		String dataKey = roles.contains(MicrosoftUser.OWNER) ? "ownerId" : "memberId";
 		boolean generalError = false;
 
@@ -1253,6 +1254,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 						.status((pendingMember != null && pendingMember.isGuest()) ? MicrosoftLog.Status.OK : MicrosoftLog.Status.KO)
 						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("teamId", teamId)
+						.addData("siteId", ss.getSiteId())
 						.addData(dataKey, pendingMember != null ? pendingMember.getId() : "null")
 						.build());
 
@@ -1265,6 +1267,7 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 						.status(MicrosoftLog.Status.OK)
 						.addData("origin", sakaiProxy.getActionOrigin())
 						.addData("teamId", teamId)
+						.addData("siteId", ss.getSiteId())
 						.addData(dataKey, member.getId())
 						.build());
 			});

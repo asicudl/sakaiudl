@@ -121,7 +121,7 @@ public interface MicrosoftCommonService {
 	boolean addMemberToTeam(String userId, String teamId) throws MicrosoftCredentialsException;
 	boolean addOwnerToTeam(String userId, String teamId) throws MicrosoftCredentialsException;
 
-	SynchronizationStatus addUsersToTeamOrGroup(String teamId, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException;
+	SynchronizationStatus addUsersToTeamOrGroup(SiteSynchronization ss, List<MicrosoftUser> members, SynchronizationStatus status, LinkedList<String> roles) throws MicrosoftCredentialsException;
 
 	boolean removeUserFromGroup(String userId, String groupId) throws MicrosoftCredentialsException;
 	boolean removeMemberFromTeam(String memberId, String teamId) throws MicrosoftCredentialsException;
