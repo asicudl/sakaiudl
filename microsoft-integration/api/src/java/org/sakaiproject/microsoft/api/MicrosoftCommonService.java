@@ -22,6 +22,7 @@ import org.sakaiproject.microsoft.api.data.MicrosoftDriveItem;
 import org.sakaiproject.microsoft.api.data.MicrosoftDriveItemFilter;
 import org.sakaiproject.microsoft.api.data.MicrosoftMembersCollection;
 import org.sakaiproject.microsoft.api.data.MicrosoftTeam;
+import org.sakaiproject.microsoft.api.data.AttendanceRecord;
 import org.sakaiproject.microsoft.api.data.MicrosoftUser;
 import org.sakaiproject.microsoft.api.data.MicrosoftUserIdentifier;
 import org.sakaiproject.microsoft.api.data.SynchronizationStatus;
@@ -155,7 +156,11 @@ public interface MicrosoftCommonService {
 	TeamsMeetingData createOnlineMeeting(String userEmail, String subject, Instant startDate, Instant endDate, List<String> coorganizerEmails) throws MicrosoftCredentialsException;
 	void updateOnlineMeeting(String userEmail, String meetingId, String subject, Instant startDate, Instant endDate, List<String> coorganizerEmails) throws MicrosoftCredentialsException;
 	List<MeetingRecordingData> getOnlineMeetingRecordings(String onlineMeetingId, List<String> teamIdsList, boolean force) throws MicrosoftCredentialsException;
-	
+	List<AttendanceRecord> getMeetingAttendanceReport(String onlineMeetingId, String userEmail) throws MicrosoftCredentialsException;
+	void inicializeMeetingNameColumns(String meetingAttendanceReport, String meetingName, String meetingEmail, String meetingRole, String meetingDuration, String meetingDurationInterval, String meetingEntryDate, String meetingExitDate, String meetingsDetails);
+	byte[] createAttendanceReportPdf(List<AttendanceRecord> attendanceRecords);
+	byte[] createAttendanceReportCsv(List<AttendanceRecord> attendanceRecords);
+
 	// ---------------------------------------- ONE-DRIVE (APPLICATION) --------------------------------------------------------
 	List<MicrosoftDriveItem> getGroupDriveItems(String groupId) throws MicrosoftCredentialsException;
 	List<MicrosoftDriveItem> getGroupDriveItems(String groupId, List<String> channelIds) throws MicrosoftCredentialsException;

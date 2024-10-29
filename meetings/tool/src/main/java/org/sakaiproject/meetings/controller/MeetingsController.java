@@ -32,9 +32,7 @@ import org.sakaiproject.authz.api.Member;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.exception.IdUnusedException;
 import org.sakaiproject.meetings.api.MeetingService;
-import org.sakaiproject.meetings.api.model.AttendeeType;
-import org.sakaiproject.meetings.api.model.Meeting;
-import org.sakaiproject.meetings.api.model.MeetingAttendee;
+import org.sakaiproject.meetings.api.model.*;
 import org.sakaiproject.meetings.controller.data.GroupData;
 import org.sakaiproject.meetings.controller.data.MeetingData;
 import org.sakaiproject.meetings.controller.data.NotificationType;
@@ -43,9 +41,7 @@ import org.sakaiproject.meetings.exceptions.MeetingsException;
 import org.sakaiproject.microsoft.api.MicrosoftCommonService;
 import org.sakaiproject.microsoft.api.MicrosoftSynchronizationService;
 import org.sakaiproject.microsoft.api.SakaiProxy;
-import org.sakaiproject.microsoft.api.data.MeetingRecordingData;
-import org.sakaiproject.microsoft.api.data.SakaiCalendarEvent;
-import org.sakaiproject.microsoft.api.data.TeamsMeetingData;
+import org.sakaiproject.microsoft.api.data.*;
 import org.sakaiproject.microsoft.api.exceptions.MicrosoftCredentialsException;
 import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
@@ -53,7 +49,10 @@ import org.sakaiproject.user.api.User;
 import org.sakaiproject.util.ResourceLoader;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -104,7 +103,17 @@ public class MeetingsController {
 	private static final String NOTIF_CONTENT = "notification.content";
 	private static final String SMTP_FROM = "smtpFrom@org.sakaiproject.email.api.EmailService";
 	private static final String NO_REPLY = "no-reply@";
-	
+	private static final String MEETING_ATTENDANCE_REPORT = rb.getString("meeting.attendance_report");
+	private static final String MEETING_COLUMN_NAME = rb.getString("meeting.column_name");
+	private static final String MEETING_COLUMN_EMAIL = rb.getString("meeting.column_email");
+	private static final String MEETING_COLUMN_ROL = rb.getString("meeting.column_role");
+	private static final String MEETING_COLUMN_DURATION = rb.getString("meeting.column_duration");
+	private static final String MEETING_DURATION_INTERVAL = rb.getString("meeting.interval_duration");
+	private static final String MEETING_ENTRY_DATE = rb.getString("meeting.entry_date");
+	private static final String MEETING_EXIT_DATE = rb.getString("meeting.exit_date");
+	private static final String MEETING_DETAILS= rb.getString("meeting.details");
+
+
 	/**
 	 * Check if there's an user logged
 	 * @return
@@ -590,6 +599,42 @@ public class MeetingsController {
 			meetingService.deleteMeetingById(meetingId);
 		} catch (Exception e) {
 			log.error("Error deleting meeting", e);
+			throw new MeetingsException(e.getLocalizedMessage());
+		}
+	}
+
+	@GetMapping(value = "/meeting/{meetingId}/attendanceReport", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> getMeetingAttendanceReport(@PathVariable String meetingId, @RequestParam(required = false) String format) throws MeetingsException {
+		checkCurrentUserInMeeting(meetingId);
+		Meeting meeting = meetingService.getMeeting(meetingId);
+		String onlineMeetingId = meetingService.getMeetingProperty(meeting, ONLINE_MEETING_ID);
+		String organizerEmail = meetingService.getMeetingProperty(meeting, ORGANIZER_USER);
+		checkUpdatePermissions(meeting.getSiteId());
+		microsoftCommonService.inicializeMeetingNameColumns(MEETING_ATTENDANCE_REPORT, MEETING_COLUMN_NAME, MEETING_COLUMN_EMAIL, MEETING_COLUMN_ROL, MEETING_COLUMN_DURATION, MEETING_DURATION_INTERVAL, MEETING_ENTRY_DATE, MEETING_EXIT_DATE, MEETING_DETAILS);
+
+		try {
+			List<AttendanceRecord> attendanceRecords = microsoftCommonService.getMeetingAttendanceReport(onlineMeetingId, organizerEmail);
+			if ("pdf".equalsIgnoreCase(format)) {
+				String filename = "attendance_report.pdf";
+				ContentDisposition contentDisposition = ContentDisposition.builder("attachment").filename(filename).build();
+
+				byte[] pdfContent = microsoftCommonService.createAttendanceReportPdf(attendanceRecords);
+
+				return ResponseEntity.ok()
+						.headers(h -> h.setContentDisposition(contentDisposition))
+						.contentType(MediaType.APPLICATION_PDF)
+						.body(pdfContent);
+			} else if ("csv".equalsIgnoreCase(format)) {
+				byte[] csvContent = microsoftCommonService.createAttendanceReportCsv(attendanceRecords);
+				return ResponseEntity.ok()
+						.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"attendance_report.csv\"")
+						.contentType(MediaType.TEXT_PLAIN)
+						.body(csvContent);
+			} else {
+				return ResponseEntity.ok(attendanceRecords);
+			}
+		} catch (Exception e) {
+			log.error("Error al obtener el reporte de asistencia", e);
 			throw new MeetingsException(e.getLocalizedMessage());
 		}
 	}

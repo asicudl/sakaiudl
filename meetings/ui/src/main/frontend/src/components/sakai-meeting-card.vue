@@ -302,7 +302,12 @@ export default {
         { "string": this.i18n.edit_action, "icon": "edit", "action": this.editMeeting, "show": this.editable },
         { "string": this.i18n.get_link_action, "icon": "link", "action": this.getMeetingLink, "url": this.url, "show": this.editable && this.showJoinButton },
         { "string": this.i18n.check_recordings_action, "icon": "videocamera", "action": this.checkMeetingRecordings, "show": true },
-        { "string": this.i18n.delete_action, "icon": "delete", "action": this.askDeleteMeeting, "show": this.editable}
+        { "string": this.i18n.delete_action, "icon": "delete", "action": this.askDeleteMeeting, "show": this.editable},
+        { "string": this.i18n.download_attendance_report_action, "icon": "download", "show": true,
+        "subMenu": [ { "string": this.i18n.download_report_pdf, "icon": "filePdf", "action": () => this.downloadAttendanceReport('pdf'), "show": false },
+                     { "string": this.i18n.download_report_excel, "icon": "fileCsv", "action": () => this.downloadAttendanceReport('csv'), "show": true },
+                     { "string": this.i18n.preview_report, "icon": "eye", "action": this.downloadAttendanceReport, "show": false }
+        ]}
       ];
     },
     showJoinButton() {
@@ -349,6 +354,30 @@ export default {
         })
         .catch((error) => console.error('Error:', error))
         .then((response) => this.$emit('onDeleted', this.id));
+    },
+    downloadAttendanceReport(format) {
+      fetch(`${constants.toolPlacement}/meeting/${this.id}/attendanceReport?format=${format}`, {
+        credentials: 'include',
+        method: 'GET',
+        cache: "no-cache",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+      })
+       .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `attendance_report.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        })
+        .catch(error => console.error('Error downloading report:', error));
     },
     editMeeting() {
       let parameters = {

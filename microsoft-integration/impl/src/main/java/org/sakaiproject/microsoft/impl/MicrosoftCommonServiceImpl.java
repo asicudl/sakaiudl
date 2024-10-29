@@ -15,6 +15,7 @@
  */
 package org.sakaiproject.microsoft.impl;
 
+import java.io.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -39,6 +40,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.google.gson.*;
+import com.lowagie.text.*;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
+import com.microsoft.graph.requests.*;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 
 import com.microsoft.graph.content.BatchRequestContent;
 import com.microsoft.graph.content.BatchResponseContent;
@@ -60,6 +68,7 @@ import org.sakaiproject.messaging.api.MicrosoftMessagingService;
 import org.sakaiproject.microsoft.api.MicrosoftAuthorizationService;
 import org.sakaiproject.microsoft.api.MicrosoftCommonService;
 import org.sakaiproject.microsoft.api.SakaiProxy;
+import org.sakaiproject.microsoft.api.data.*;
 import org.sakaiproject.microsoft.api.data.MeetingRecordingData;
 import org.sakaiproject.microsoft.api.data.MicrosoftChannel;
 import org.sakaiproject.microsoft.api.data.MicrosoftCredentials;
@@ -85,10 +94,6 @@ import org.sakaiproject.microsoft.provider.AdminAuthProvider;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
 
 import com.microsoft.graph.tasks.LargeFileUploadTask;
 import com.microsoft.graph.tasks.LargeFileUploadResult;
@@ -176,6 +181,17 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	private static final int UDL_CODE_SIZE = 15;
 	private static final String TEAM_CHARACTER_SEPARATOR = "...";
 
+	private static final Font BOLD_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10, Font.BOLD);
+
+	private String MEETING_ATTENDANCE_REPORT;
+	private String MEETING_COLUMN_NAME;
+	private String MEETING_COLUMN_EMAIL;
+	private String MEETING_COLUMN_ROLE;
+	private String MEETING_COLUMN_DURATION;
+	private String MEETING_DURATION_INTERVAL;
+	private String MEETING_ENTRY_DATE;
+	private String MEETING_EXIT_DATE;
+	private String MEETING_DETAILS;
 
 	@Setter private ServerConfigurationService serverConfigurationService;
 	@Setter private CacheManager cacheManager;
@@ -2298,6 +2314,157 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		getCache().put(CACHE_RECORDINGS + onlineMeetingId, ret);
 
 		return ret;
+	}
+
+	@Override
+	public List<AttendanceRecord> getMeetingAttendanceReport(String onlineMeetingId, String userEmail) throws MicrosoftCredentialsException {
+
+		List<AttendanceRecord> attendanceRecordsResponse = new ArrayList<>();
+
+		MicrosoftUser organizerUser = getUserByEmail(userEmail);
+
+		MeetingAttendanceReportCollectionPage attendanceReports = getGraphClient()
+				.users(organizerUser.getId())
+				.onlineMeetings(onlineMeetingId)
+				.attendanceReports()
+				.buildRequest()
+				.get();
+
+		if (attendanceReports != null && attendanceReports.getCurrentPage() != null) {
+			for (com.microsoft.graph.models.MeetingAttendanceReport report : attendanceReports.getCurrentPage()) {
+				String reportId = report.id;
+
+				AttendanceRecordCollectionPage attendanceRecords = getGraphClient()
+						.users(organizerUser.getId())
+						.onlineMeetings()
+						.byId(onlineMeetingId)
+						.attendanceReports(reportId)
+						.attendanceRecords()
+						.buildRequest()
+						.get();
+
+				if (attendanceRecords != null && attendanceRecords.getCurrentPage() != null) {
+					for (com.microsoft.graph.models.AttendanceRecord record : attendanceRecords.getCurrentPage()) {
+						AttendanceRecord response = new AttendanceRecord();
+
+						if (record.emailAddress != null) response.setEmail(record.emailAddress);
+						if (record.id != null) response.setId(record.id);
+						if (record.identity.displayName != null) response.setDisplayName(record.identity.displayName);
+						if (record.role != null) response.setRole(record.role);
+						if (record.totalAttendanceInSeconds != null) response.setTotalAttendanceInSeconds(record.totalAttendanceInSeconds);
+
+						List<AttendanceInterval> intervals = new ArrayList<>();
+						if (record.attendanceIntervals != null) {
+							for (com.microsoft.graph.models.AttendanceInterval interval : record.attendanceIntervals) {
+								AttendanceInterval intervalResponse = new AttendanceInterval();
+								if (interval.joinDateTime != null) intervalResponse.setJoinDateTime(interval.joinDateTime.toString());
+								if (interval.leaveDateTime != null) intervalResponse.setLeaveDateTime(interval.leaveDateTime.toString());
+								if (interval.durationInSeconds != null) intervalResponse.setDurationInSeconds(interval.durationInSeconds);
+								intervals.add(intervalResponse);
+							}
+						}
+						response.setAttendanceIntervals(intervals);
+
+
+						attendanceRecordsResponse.add(response);
+
+					}
+				}
+
+			}
+
+
+		}
+		return attendanceRecordsResponse;
+	}
+
+
+	public void inicializeMeetingNameColumns(String meetingAttendanceReport, String meetingName, String meetingEmail, String meetingRole, String meetingDuration, String meetingDurationInterval, String meetingEntryDate, String meetingExitDate, String meetingsDetails) {
+		MEETING_ATTENDANCE_REPORT= meetingAttendanceReport;
+		MEETING_COLUMN_NAME = meetingName;
+		MEETING_COLUMN_EMAIL = meetingEmail;
+		MEETING_COLUMN_ROLE = meetingRole;
+		MEETING_COLUMN_DURATION = meetingDuration;
+		MEETING_DURATION_INTERVAL = meetingDurationInterval;
+		MEETING_ENTRY_DATE = meetingEntryDate;
+		MEETING_EXIT_DATE = meetingExitDate;
+		MEETING_DETAILS = meetingsDetails;
+	}
+
+	@Transactional(readOnly = true)
+	public byte[] createAttendanceReportPdf(List<AttendanceRecord> attendanceRecords) {
+
+		com.lowagie.text.Document document = new Document(PageSize.A4.rotate());
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		PdfWriter.getInstance(document, out);
+		document.open();
+
+		Paragraph title = new Paragraph(MEETING_ATTENDANCE_REPORT, BOLD_FONT);
+		title.setAlignment(Element.ALIGN_CENTER);
+		document.add(title);
+		document.add(new Paragraph(" "));
+
+		PdfPTable table = new PdfPTable(4);
+		table.addCell(MEETING_COLUMN_NAME);
+		table.addCell(MEETING_COLUMN_EMAIL);
+		table.addCell(MEETING_COLUMN_ROLE);
+		table.addCell(MEETING_COLUMN_DURATION);
+
+
+		for (AttendanceRecord record : attendanceRecords) {
+			String displayName = record.getDisplayName();
+			String email = record.getEmail();
+			String role = record.getRole();
+			String duration = String.valueOf(record.getTotalAttendanceInSeconds());
+
+			table.addCell(displayName);
+			table.addCell(email);
+			table.addCell(role);
+			table.addCell(duration);
+		}
+
+		document.add(table);
+
+		document.add(new Paragraph(" "));
+
+		for (AttendanceRecord record : attendanceRecords) {
+			for (AttendanceInterval interval : record.getAttendanceIntervals()) {
+				document.add(new Paragraph(MEETING_DETAILS + " " + record.getDisplayName() + ":"));
+				document.add(new Paragraph("- " + MEETING_ENTRY_DATE + interval.getJoinDateTime()));
+				document.add(new Paragraph("- " + MEETING_EXIT_DATE + interval.getLeaveDateTime()));
+				document.add(new Paragraph("- " + MEETING_DURATION_INTERVAL + interval.getDurationInSeconds()));
+				document.add(new Paragraph(" "));
+			}
+		}
+
+		document.close();
+		return out.toByteArray();
+	}
+
+	@Transactional(readOnly = true)
+	public byte[] createAttendanceReportCsv(List<AttendanceRecord> attendanceRecords) {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try (CSVPrinter csvPrinter = new CSVPrinter(new PrintWriter(out), CSVFormat.DEFAULT
+				.withHeader(MEETING_COLUMN_NAME, MEETING_COLUMN_EMAIL, MEETING_COLUMN_ROLE, MEETING_COLUMN_DURATION, MEETING_ENTRY_DATE, MEETING_EXIT_DATE, MEETING_DURATION_INTERVAL))) {
+
+			for (AttendanceRecord record : attendanceRecords) {
+				for (AttendanceInterval interval : record.getAttendanceIntervals()) {
+					csvPrinter.printRecord(
+							record.getDisplayName(),
+							record.getEmail(),
+							record.getRole(),
+							record.getTotalAttendanceInSeconds(),
+							interval.getJoinDateTime(),
+							interval.getLeaveDateTime(),
+							interval.getDurationInSeconds()
+					);
+				}
+			}
+		} catch (IOException e) {
+			log.error("Error creating CSV file", e);
+		}
+
+		return out.toByteArray();
 	}
 
 	// ---------------------------------------- ONE-DRIVE (APPLICATION) --------------------------------------------------------

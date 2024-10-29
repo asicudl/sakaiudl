@@ -26,6 +26,7 @@
       </SakaiDropdownButton>
        -->
     </div>
+    <div style="bottom: 10px;" class="sak-banner-info mt-0 mb-0">{{ i18n.meeting_alert }}</div>
     <div v-if="searching && meetingsList.length > 0">
       <div class="section-heading">
         <h1 id="flush-headingOne" class="h4">{{ i18n.search_results }}</h1>

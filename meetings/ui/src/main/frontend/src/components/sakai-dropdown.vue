@@ -22,6 +22,18 @@
           />
           {{ item.string }}
         </a>
+        <ul v-if="item.subMenu" role="menu" class="dropdown-submenu">
+          <li v-for="subItem in item.subMenu" :key="subItem.string" class="divider">
+            <a
+              v-if="subItem.show"
+              class="dropdown-item"
+              @click="handleClick(subItem, $event)"
+            >
+             <sakai-icon :iconkey="subItem.icon" class="icon-wrap" :class="item.icon"/>
+               {{ subItem.string }}
+            </a>
+          </li>
+      </ul>
       </li>
     </ul>
   </div>
@@ -140,6 +152,25 @@ export default {
   .divider:last-child {
     border-bottom: none;
   }
+}
+
+.dropdown-submenu {
+  box-shadow: var(--elevation-1dp);
+  border: 1px solid var(--button-border-color);
+  background-color: var(--tool-menu-background-color);
+  position: absolute;
+  padding: 0;
+  left: 100%;
+  top: 100px;
+  display: none;
+  border-radius: 10px;
+  list-style: none;
+}
+
+li:hover > .dropdown-submenu {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 }
 </style>
