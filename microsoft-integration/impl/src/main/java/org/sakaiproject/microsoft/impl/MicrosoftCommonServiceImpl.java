@@ -2396,7 +2396,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 
 	@Transactional(readOnly = true)
 	public byte[] createAttendanceReportPdf(List<AttendanceRecord> attendanceRecords) {
-
 		com.lowagie.text.Document document = new Document(PageSize.A4.rotate());
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		PdfWriter.getInstance(document, out);
@@ -2433,8 +2432,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		for (AttendanceRecord record : attendanceRecords) {
 			for (AttendanceInterval interval : record.getAttendanceIntervals()) {
 				document.add(new Paragraph(MEETING_DETAILS + " " + record.getDisplayName() + ":"));
-				document.add(new Paragraph("- " + MEETING_ENTRY_DATE + interval.getJoinDateTime()));
-				document.add(new Paragraph("- " + MEETING_EXIT_DATE + interval.getLeaveDateTime()));
+				document.add(new Paragraph("- " + MEETING_ENTRY_DATE + AttendanceInterval.formatDateTime(interval.getJoinDateTime())));
+				document.add(new Paragraph("- " + MEETING_EXIT_DATE + AttendanceInterval.formatDateTime(interval.getLeaveDateTime())));
 				document.add(new Paragraph("- " + MEETING_DURATION_INTERVAL + interval.getDurationInSeconds()));
 				document.add(new Paragraph(" "));
 			}
@@ -2457,8 +2456,8 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 							record.getEmail(),
 							record.getRole(),
 							record.getTotalAttendanceInSeconds(),
-							interval.getJoinDateTime(),
-							interval.getLeaveDateTime(),
+							AttendanceInterval.formatDateTime(interval.getJoinDateTime()),
+							AttendanceInterval.formatDateTime(interval.getLeaveDateTime()),
 							interval.getDurationInSeconds()
 					);
 				}

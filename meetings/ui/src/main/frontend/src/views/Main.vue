@@ -26,16 +26,17 @@
       </SakaiDropdownButton>
        -->
     </div>
-    <div style="bottom: 10px;" class="sak-banner-info mt-0 mb-0">
+    <div style="bottom: 10px;" class="sak-banner-info-meetings mt-0 mb-0">
     {{ i18n.meeting_alert }}
-    <br><br>
     <ul>
       <li>
         <a href="msteams://teams.microsoft.com" style="color: blue; text-decoration: underline;">{{ i18n.meeting_login_application }}</a>
       </li>
-        <br>
       <li>
         <span>{{ i18n.meeting_not_application_installed }} <a href="https://www.microsoft.com/es-es/microsoft-teams/download-app" target="_blank" style="color: blue; text-decoration: underline;">{{ i18n.meeting_link }}</a> {{ i18n.meeting_download_by_link }}</span>
+      </li>
+      <li>
+        <span>{{ i18n.meeting_limited_funcionality }}</span>
       </li>
     </ul>
     </div>

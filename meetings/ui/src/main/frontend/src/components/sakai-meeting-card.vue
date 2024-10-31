@@ -104,6 +104,27 @@
       </div>
     </div>
   </div>
+  <div v-if="showPreview" class="sakai-modal-overlay" @click.self="showPreview = false">
+    <div class="sakai-modal-content">
+      <h3 class="modal-title">{{ i18n.preview_report }}</h3>
+      <div v-if="filteredCsvData.length === 0" class="no-data-message">
+            <p>{{ i18n.no_preview_report }}</p>
+      </div>
+      <table v-else class="csv-preview-table">
+        <thead>
+          <tr>
+            <th v-for="header in csvHeaders" :key="header">{{ header }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, rowIndex) in csvData" :key="rowIndex">
+            <td v-for="cell in row.filter(c => c !== '')" :key="cell">{{ cell }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="close-modal-btn" @click="showPreview = false">{{ i18n.close_action }}</button>
+    </div>
+  </div>
 </template>
 
 <style>
@@ -142,6 +163,96 @@ h2 {
 .contextTitle {
   text-transform: uppercase;
 }
+
+}
+.sakai-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+.sakai-modal-content {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: fit-content;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  animation: slide-down 0.3s ease;
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.csv-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.csv-preview-table th,
+.csv-preview-table td {
+  border: 1px solid #ddd;
+  padding: 0.8rem;
+  text-align: left;
+}
+
+.csv-preview-table th {
+  background-color: #f7f7f7;
+  color: #555;
+}
+
+.csv-preview-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.no-data-message {
+  text-align: center;
+  font-weight: bold;
+  color: #777;
+  margin: 1rem 0;
+}
+
+.close-modal-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.close-modal-btn:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
 }
 </style>
 
@@ -208,7 +319,10 @@ export default {
       savedToCalendar: { type: Boolean, default: false },
       participantOption: {type: String, default: null },
       groupSelection: {type: Array, default: new Array() },
-      showBannerInfo: false
+      showBannerInfo: false,
+      showPreview: false,
+      csvHeaders: [],
+      csvData: []
     };
   },
   props: {
@@ -303,10 +417,10 @@ export default {
         { "string": this.i18n.get_link_action, "icon": "link", "action": this.getMeetingLink, "url": this.url, "show": this.editable && this.showJoinButton },
         { "string": this.i18n.check_recordings_action, "icon": "videocamera", "action": this.checkMeetingRecordings, "show": true },
         { "string": this.i18n.delete_action, "icon": "delete", "action": this.askDeleteMeeting, "show": this.editable},
-        { "string": this.i18n.download_attendance_report_action, "icon": "download", "show": true,
+        { "string": this.i18n.attendance_report_action, "icon": "download", "show": true,
         "subMenu": [ { "string": this.i18n.download_report_pdf, "icon": "filePdf", "action": () => this.downloadAttendanceReport('pdf'), "show": false },
                      { "string": this.i18n.download_report_excel, "icon": "fileCsv", "action": () => this.downloadAttendanceReport('csv'), "show": true },
-                     { "string": this.i18n.preview_report, "icon": "eye", "action": this.downloadAttendanceReport, "show": false }
+                     { "string": this.i18n.preview_report, "icon": "eye", "action": this.loadPreviewData, "show": true }
         ]}
       ];
     },
@@ -333,7 +447,11 @@ export default {
       if(this.i18n && this.i18n.delete_modal_message) {
         return this.i18n.delete_modal_message.format(this.title);
       }
-      
+    },
+    filteredCsvData() {
+      return this.csvData.filter(row =>
+        row.every(cell => cell !== "" && cell !== null && cell !== undefined)
+      );
     }
   },
   methods: {
@@ -379,6 +497,27 @@ export default {
         })
         .catch(error => console.error('Error downloading report:', error));
     },
+  loadPreviewData() {
+    fetch(`${constants.toolPlacement}/meeting/${this.id}/attendanceReport?format=csv`, {
+      credentials: 'include',
+      method: 'GET',
+      cache: "no-cache",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.text();
+    })
+    .then(csvText => {
+      const rows = csvText.split('\n').map(row => row.split(','));
+      this.csvHeaders = rows[0];
+      this.csvData = rows.slice(1);
+      this.showPreview = true;
+    })
+    .catch(error => console.error('Error loading preview data:', error));
+  },
     editMeeting() {
       let parameters = {
         id: this.id,
@@ -445,3 +584,4 @@ export default {
   }
 };
 </script>
+

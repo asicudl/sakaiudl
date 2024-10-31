@@ -4,7 +4,7 @@
       <slot name="activation"></slot>
     </div>
     <ul class="dropdown-menu" role="menu" :id="menuid">
-      <li v-for="item in items" :key="item.id" class="divider">
+      <li v-for="item in items" :key="item.id" class="divider" @mouseenter="showSubMenu($event)">
         <a
           v-if="item.show"
           class="dropdown-item"
@@ -22,7 +22,7 @@
           />
           {{ item.string }}
         </a>
-        <ul v-if="item.subMenu" role="menu" class="dropdown-submenu">
+        <ul v-if="item.subMenu" role="menu" :class="['dropdown-submenu', isSubMenuOverflowing ? 'left' : 'right']">
           <li v-for="subItem in item.subMenu" :key="subItem.string" class="divider">
             <a
               v-if="subItem.show"
@@ -64,6 +64,7 @@ export default {
     return {
       selectedId: null,
       expanded: false,
+      isSubMenuOverflowing: false,
     };
   },
   computed: {},
@@ -85,6 +86,18 @@ export default {
       } else if (item.action) {
         item.action();
       }
+    },
+    showSubMenu(event) {
+        const submenu = event.currentTarget.querySelector('.dropdown-submenu');
+
+        if (submenu) {
+          const rect = submenu.getBoundingClientRect();
+          const rightEdge = rect.right;
+
+          if (rightEdge > window.innerWidth) {
+            this.isSubMenuOverflowing = true;
+          }
+        }
     },
     handleRoute(route) {
       this.$router.push({ path: route });
@@ -171,6 +184,14 @@ li:hover > .dropdown-submenu {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+.dropdown-submenu.left {
+  left: auto;
+  right: 100%;
+}
+
+.dropdown-submenu.right {
+  left: 100%;
 }
 }
 </style>

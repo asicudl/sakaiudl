@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.Collection;
 import java.util.stream.Collectors;
@@ -103,16 +105,6 @@ public class MeetingsController {
 	private static final String NOTIF_CONTENT = "notification.content";
 	private static final String SMTP_FROM = "smtpFrom@org.sakaiproject.email.api.EmailService";
 	private static final String NO_REPLY = "no-reply@";
-	private static final String MEETING_ATTENDANCE_REPORT = rb.getString("meeting.attendance_report");
-	private static final String MEETING_COLUMN_NAME = rb.getString("meeting.column_name");
-	private static final String MEETING_COLUMN_EMAIL = rb.getString("meeting.column_email");
-	private static final String MEETING_COLUMN_ROL = rb.getString("meeting.column_role");
-	private static final String MEETING_COLUMN_DURATION = rb.getString("meeting.column_duration");
-	private static final String MEETING_DURATION_INTERVAL = rb.getString("meeting.interval_duration");
-	private static final String MEETING_ENTRY_DATE = rb.getString("meeting.entry_date");
-	private static final String MEETING_EXIT_DATE = rb.getString("meeting.exit_date");
-	private static final String MEETING_DETAILS= rb.getString("meeting.details");
-
 
 	/**
 	 * Check if there's an user logged
@@ -610,7 +602,7 @@ public class MeetingsController {
 		String onlineMeetingId = meetingService.getMeetingProperty(meeting, ONLINE_MEETING_ID);
 		String organizerEmail = meetingService.getMeetingProperty(meeting, ORGANIZER_USER);
 		checkUpdatePermissions(meeting.getSiteId());
-		microsoftCommonService.inicializeMeetingNameColumns(MEETING_ATTENDANCE_REPORT, MEETING_COLUMN_NAME, MEETING_COLUMN_EMAIL, MEETING_COLUMN_ROL, MEETING_COLUMN_DURATION, MEETING_DURATION_INTERVAL, MEETING_ENTRY_DATE, MEETING_EXIT_DATE, MEETING_DETAILS);
+		microsoftCommonService.inicializeMeetingNameColumns(rb.getString("meeting.attendance_report"), rb.getString("meeting.column_name"), rb.getString("meeting.column_email"), rb.getString("meeting.column_role"), rb.getString("meeting.column_duration"), rb.getString("meeting.interval_duration"), rb.getString("meeting.entry_date"), rb.getString("meeting.exit_date"), rb.getString("meeting.details"));
 
 		try {
 			List<AttendanceRecord> attendanceRecords = microsoftCommonService.getMeetingAttendanceReport(onlineMeetingId, organizerEmail);
