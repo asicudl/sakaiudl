@@ -104,6 +104,17 @@
       </div>
     </div>
   </div>
+  <div v-if="isLoading" class="sakai-modal-overlay">
+    <div class="loading-modal-content">
+      <p>{{ i18n.loading_report_data }}</p>
+      <span class="spinner"></span>
+    </div>
+  </div>
+  <div v-if="errorMessage" class="alert error-alert">
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-message">{{ i18n.download_report_error_message }}</span>
+    <button class="close-alert-btn" @click="clearErrorMessage">✖️</button>
+  </div>
   <div v-if="showPreview" class="sakai-modal-overlay" @click.self="showPreview = false">
     <div class="sakai-modal-content">
       <h3 class="modal-title">{{ i18n.preview_report }}</h3>
@@ -118,7 +129,7 @@
         </thead>
         <tbody>
           <tr v-for="(row, rowIndex) in csvData" :key="rowIndex">
-            <td v-for="cell in row.filter(c => c !== '')" :key="cell">{{ cell }}</td>
+            <td v-for="cell in row" :key="cell">{{ cell }}</td>
           </tr>
         </tbody>
       </table>
@@ -254,6 +265,83 @@ h2 {
   background-color: #c82333;
   transform: translateY(-2px);
 }
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #333;
+}
+
+.loading-modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.spinner {
+  display: inline-block;
+  margin-top: 15px;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  padding: 10px 20px;
+  border-radius: 5px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.error-alert {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.alert-icon {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+.alert-message {
+  flex: 1;
+}
+
+.close-alert-btn {
+  background: none;
+  border: none;
+  color: #721c24;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.close-alert-btn:hover {
+  color: #d9534f;
+}
+
 </style>
 
 <script>
@@ -322,7 +410,9 @@ export default {
       showBannerInfo: false,
       showPreview: false,
       csvHeaders: [],
-      csvData: []
+      csvData: [],
+      isLoading: false,
+      errorMessage: false,
     };
   },
   props: {
@@ -474,6 +564,7 @@ export default {
         .then((response) => this.$emit('onDeleted', this.id));
     },
     downloadAttendanceReport(format) {
+      this.isLoading = true;
       fetch(`${constants.toolPlacement}/meeting/${this.id}/attendanceReport?format=${format}`, {
         credentials: 'include',
         method: 'GET',
@@ -484,6 +575,8 @@ export default {
           if (!response.ok) {
             throw new Error('Network response was not ok');
           }
+          this.isLoading = false;
+          this.errorMessage = false;
           return response.blob();
         })
         .then(blob => {
@@ -495,9 +588,14 @@ export default {
           a.click();
           a.remove();
         })
-        .catch(error => console.error('Error downloading report:', error));
+        .catch(error => {
+          this.isLoading = false
+          this.errorMessage = true;
+          console.error('Error downloading report:', error)
+        });
     },
   loadPreviewData() {
+    this.isLoading = true;
     fetch(`${constants.toolPlacement}/meeting/${this.id}/attendanceReport?format=csv`, {
       credentials: 'include',
       method: 'GET',
@@ -508,15 +606,24 @@ export default {
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
+      this.errorMessage = false;
       return response.text();
     })
     .then(csvText => {
-      const rows = csvText.split('\n').map(row => row.split(','));
+      const rows = csvText.split('\n').map(row => row.split(',')).filter(row => row.some(cell => cell.trim() !== ''));
       this.csvHeaders = rows[0];
       this.csvData = rows.slice(1);
+      this.isLoading = false;
       this.showPreview = true;
     })
-    .catch(error => console.error('Error loading preview data:', error));
+    .catch(error => {
+      this.isLoading = false
+      this.errorMessage = true;
+      console.error('Error loading preview data:', error)
+      });
+  },
+  clearErrorMessage() {
+      this.errorMessage = false;
   },
     editMeeting() {
       let parameters = {
