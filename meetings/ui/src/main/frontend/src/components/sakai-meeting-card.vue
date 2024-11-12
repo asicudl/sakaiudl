@@ -640,16 +640,15 @@ export default {
       this.$router.push({name: "EditMeeting", params: { id: this.id}});
     },
     getMeetingLink() {
-      const storage = document.createElement('textarea');
-      storage.value = this.url;
-      this.$el.appendChild(storage);
-      storage.select();
-      storage.setSelectionRange(0, 99999);
-      document.execCommand('copy');
-      this.$el.removeChild(storage);
-      this.showBannerInfo = true;
-      setTimeout(function(){ this.showBannerInfo = false; }.bind(this), 3000);
-      return false;
+      navigator.clipboard.writeText(this.url).then(() => {
+        this.showBannerInfo = true;
+        setTimeout(() => {
+          this.showBannerInfo = false;
+        }, 3000);
+      }).catch(err => {
+        console.error('Error copying to clipboard: ', err);
+      });
+        return false;
     },
     checkMeetingRecordings() {
       let parameters = {
