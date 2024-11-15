@@ -17,11 +17,13 @@ package org.sakaiproject.microsoft.impl.jobs;
 
 import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.persistence.RollbackException;
 
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -78,21 +80,40 @@ public class RunSynchronizationsJob implements Job {
 			
 			List<SiteSynchronization> list = microsoftSynchronizationService.getAllSiteSynchronizations(true);
 			for(SiteSynchronization ss : list) {
-				try {
-					//check filters
-					if(ss.getSite() == null || !siteFilter.match(ss.getSite())) {
-						log.debug("Site with id={} skipped due to filter restrinctions", ss.getSiteId());
-						continue;
-					}
-					
-					microsoftSynchronizationService.runSiteSynchronization(ss);
+				int retryCount = 0;
+				final int maxRetries = 3;
+				while (retryCount < maxRetries) {
+					try {
+						if(retryCount > 0) {
+							log.debug("Retrying Site Synchronization for siteId={}, teamId={} for the {} time", ss.getSiteId(), ss.getTeamId(), retryCount);
+						}
 
-					if (ss.getGroupSynchronizationsList().stream().anyMatch(group -> group.getStatus().equals(SynchronizationStatus.OK)) && ss.getStatus().equals(SynchronizationStatus.ERROR)) {
-						ss.setStatus(SynchronizationStatus.PARTIAL_OK);
-						microsoftSynchronizationService.saveOrUpdateSiteSynchronization(ss);
+						if(ss.getSite() == null || !siteFilter.match(ss.getSite())) {
+							log.debug("Site with id={} skipped due to filter restrinctions", ss.getSiteId());
+							break;
+						}
+
+						microsoftSynchronizationService.runSiteSynchronization(ss);
+
+						if (ss.getGroupSynchronizationsList().stream().anyMatch(group -> group.getStatus().equals(SynchronizationStatus.OK)) && ss.getStatus().equals(SynchronizationStatus.ERROR)) {
+							ss.setStatus(SynchronizationStatus.PARTIAL_OK);
+							microsoftSynchronizationService.saveOrUpdateSiteSynchronization(ss);
+						}
+
+						break;
+					} catch (MicrosoftGenericException e) {
+						log.debug("MicrosoftGenericException running Site Synchronization for siteId={}, teamId={}", ss.getSiteId(), ss.getTeamId());
+						retryCount++;
+					} catch (RollbackException e) {
+						log.debug("RollbackException running Site Synchronization for siteId={}, teamId={}", ss.getSiteId(), ss.getTeamId());
+						retryCount++;
+					} catch (ConcurrentModificationException e) {
+						log.debug("ConcurrentModificationException running Site Synchronization for siteId={}, teamId={}", ss.getSiteId(), ss.getTeamId());
+						retryCount++;
+					} catch (Exception e) {
+						log.error("Exception while running RunSynchronizationsJob", e);
+						retryCount++;
 					}
-				} catch (MicrosoftGenericException e) {
-					log.debug("Exception running Site Synchronization for siteId={}, teamId={}", ss.getSiteId(), ss.getTeamId());
 				}
 			}
 		} catch (Exception e) {
