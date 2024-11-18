@@ -182,6 +182,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 	private static final String TEAM_CHARACTER_SEPARATOR = "...";
 
 	private static final Font BOLD_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10, Font.BOLD);
+	private final int MAX_RETRY = 2;
+	private final int MAX_PER_REQUEST = 20;
+	private final int MAX_LENGTH = 20;
 
 	private String MEETING_ATTENDANCE_REPORT;
 	private String MEETING_COLUMN_NAME;
@@ -434,7 +437,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			}
 		}
 
-		final int MAX_LENGTH = 20;
 		int pointer = 0;
 		LinkedList<Option> requestOptions = new LinkedList<Option>();
 		requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
@@ -500,7 +502,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			}
 		}
 
-		final int MAX_LENGTH = 20;
 		int pointer = 0;
 		LinkedList<Option> requestOptions = new LinkedList<Option>();
 		requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
@@ -785,7 +786,6 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 			return teamsMap;
 		}
 
-		final int MAX_LENGTH = 20;
 		int pointer = 0;
 		LinkedList<Option> requestOptions = new LinkedList<Option>();
 		requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
@@ -1211,11 +1211,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).members()
 				.buildRequest();
 
-		final int MAX_RETRY = 2;
-		final int MAX_PER_REQUEST = 20;
-		final int MAX_REQUESTS = members.size() / MAX_PER_REQUEST;
+		int maxRequests = members.size() / MAX_PER_REQUEST;
 
-		for (int i = 0; i <= MAX_REQUESTS; i++) {
+		for (int i = 0; i <= maxRequests; i++) {
 			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
 			List<MicrosoftUser> successMembers = new LinkedList<>();
 			generalError = false;
@@ -1991,11 +1989,9 @@ public class MicrosoftCommonServiceImpl implements MicrosoftCommonService {
 		ConversationMemberCollectionRequest postMembers = graphClient.teams(teamId).channels(channelId).members()
 				.buildRequest();
 
-		final int MAX_RETRY = 2;
-		final int MAX_PER_REQUEST = 20;
-		final int MAX_REQUESTS = members.size() / MAX_PER_REQUEST;
+		final int maxRequests = members.size() / MAX_PER_REQUEST;
 
-		for (int i = 0; i <= MAX_REQUESTS; i++) {
+		for (int i = 0; i <= maxRequests; i++) {
 			List<MicrosoftUser> pendingMembers = members.subList(i * MAX_PER_REQUEST, Math.min(MAX_PER_REQUEST * (i +1 ), members.size()));
 			List<MicrosoftUser> successMembers = new LinkedList<>();
 			generalError = false;

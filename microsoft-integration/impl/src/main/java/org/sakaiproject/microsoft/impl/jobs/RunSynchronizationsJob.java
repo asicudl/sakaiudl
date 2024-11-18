@@ -61,7 +61,9 @@ public class RunSynchronizationsJob implements Job {
 	
 	@Setter
 	MicrosoftConfigurationService microsoftConfigurationService;
-	
+
+	private final int MAX_RETRIES = 3;
+
 	public void init() {
 		log.info("Initializing Run Synchronizations Job");
 	}
@@ -81,8 +83,7 @@ public class RunSynchronizationsJob implements Job {
 			List<SiteSynchronization> list = microsoftSynchronizationService.getAllSiteSynchronizations(true);
 			for(SiteSynchronization ss : list) {
 				int retryCount = 0;
-				final int maxRetries = 3;
-				while (retryCount < maxRetries) {
+				while (retryCount < MAX_RETRIES) {
 					try {
 						if(retryCount > 0) {
 							log.debug("Retrying Site Synchronization for siteId={}, teamId={} for the {} time", ss.getSiteId(), ss.getTeamId(), retryCount);
