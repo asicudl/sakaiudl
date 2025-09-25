@@ -1,0 +1,9 @@
+#if (!${userIsLoggedIn})
+<div class="align-items-center portal-header-gateway  w-100" id="gatewayList">
+   #foreach ( $site in $tabsSites.tabsSites )
+                <div class="portal-header-gateway-item">
+                <a class="#if (${site.isCurrentSite}) is-selected #end" href="${site.siteUrl}" title="${site.fullTitle}"> ${site.shortDescription} </a>
+                </div>
+   #end
+</div>
+#end
