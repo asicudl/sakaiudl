@@ -15,8 +15,6 @@ body {
 
 main {
 	padding-right: 1rem;
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 	gap: 1rem;
 }
 
@@ -49,6 +47,12 @@ main {
 .gridSection {
 	display: grid;
 	grid-template-rows: repeat(auto-fit, minmax(80px, 1fr));
+	gap: 0.4rem;
+}
+
+.gridSectionColumns {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	gap: 0.4rem;
 }
 
