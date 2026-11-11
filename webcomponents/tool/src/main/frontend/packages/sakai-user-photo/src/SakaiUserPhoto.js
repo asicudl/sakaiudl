@@ -92,25 +92,31 @@ export class SakaiUserPhoto extends SakaiElement {
         <img src="${ifDefined(this.url)}" alt="${ifDefined(this.label ? this.label : undefined)}" />
       `;
     }
-
     return html`
-      <div data-user-id="${this.userId}"
-          class="sakai-user-photo ${this.classes}"
-          data-bs-toggle="popover"
-          data-bs-trigger="click"
-          aria-label="${ifDefined(this.label)}"
-          title="${ifDefined(this.label)}"
-          tabindex="0"
-          role="button"
-          style="background-image:url(${this.url}) ${this.profilePopup === SakaiUserPhoto.OFF ? "" : ";cursor: pointer;"}">
-        ${this.online ? html`
+    <div
+        data-user-id="${this.userId}"
+        class="sakai-user-photo ${this.classes}"
+        data-bs-toggle="popover"
+        data-bs-trigger="click"
+        aria-label="${ifDefined(this.label)}"
+        title="${ifDefined(this.label)}"
+        tabindex="0"
+        role="button"
+        style="background-image:url(${this.url}) ${this.profilePopup === SakaiUserPhoto.OFF ? "" : ";cursor: pointer;"}">
+
+      ${this.online ? html`
         <span></span>
-        ` : nothing}
-      </div>
-      <div class="d-none">
-        <sakai-profile user-id="${this.userId}"></sakai-profile>
-      </div>
-    `;
+      ` : nothing}
+
+    </div>
+
+    <div class="d-none">
+      <sakai-profile
+          user-id="${this.userId}"
+           ?official="${this.official}">
+      </sakai-profile>
+    </div>
+  `;
   }
 }
 

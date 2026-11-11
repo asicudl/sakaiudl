@@ -140,7 +140,8 @@
 										<sakai-user-photo
 											user-id="$submission.User.Id"
 											label="$tlang.getFormattedMessage("grading.userphoto", $submission.User.DisplayName)"
-											profile-popup="on">
+											profile-popup="on"
+											official>
 										</sakai-user-photo>
 										#end
 									</div>

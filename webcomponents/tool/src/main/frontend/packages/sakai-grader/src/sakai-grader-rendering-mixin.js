@@ -367,7 +367,7 @@ export const graderRenderingMixin = Base => class extends Base {
 
         <div class="d-lg-none d-flex justify-content-between mb-3">
           <div class="d-flex align-self-center">
-            <sakai-user-photo site-id="${getSiteId()}" user-id="${this._getPhotoUserId()}" classes="grader-photo" profile-popup="on"></sakai-user-photo>
+            <sakai-user-photo site-id="${getSiteId()}" user-id="${this._getPhotoUserId()}" classes="grader-photo" profile-popup="on" official></sakai-user-photo>
             <h2 id="grader-label" class="ms-2">
               ${this._getSubmitter(this._submission)}
             </h2>
@@ -810,7 +810,7 @@ export const graderRenderingMixin = Base => class extends Base {
         <div id="grader-gradable-container" class="flex-grow-1">
           <div id="grader-submitted-block" class="grader-block">
             <div class="d-flex align-items-center mb-3">
-              <sakai-user-photo site-id="${getSiteId()}" user-id="${this._getPhotoUserId()}" classes="grader-photo" profile-popup="on"></sakai-user-photo>
+              <sakai-user-photo site-id="${getSiteId()}" user-id="${this._getPhotoUserId()}" classes="grader-photo" profile-popup="on" official></sakai-user-photo>
               <div class="ms-2">
                 <span class="submitter-name">
                   ${this._getSubmitter(this._submission)}

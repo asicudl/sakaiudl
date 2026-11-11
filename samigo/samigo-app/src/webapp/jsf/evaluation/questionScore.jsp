@@ -486,7 +486,7 @@ $Id$
         <f:param name="sortAscending" value="true" />
         </h:commandLink>
      </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on" official></sakai-user-photo>
      <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />
@@ -526,7 +526,7 @@ $Id$
            type="org.sakaiproject.tool.assessment.ui.listener.evaluation.QuestionScoreListener" />
           </h:commandLink>    
       </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on" official></sakai-user-photo>
      <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />
@@ -568,7 +568,7 @@ $Id$
            type="org.sakaiproject.tool.assessment.ui.listener.evaluation.QuestionScoreListener" />
           </h:commandLink>    
       </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.idString}"/>' profile-popup="on" official></sakai-user-photo>
      <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />

@@ -13,7 +13,7 @@ export class SakaiProfile extends SakaiShadowElement {
   static properties = {
 
     userId: { attribute: "user-id", type: String },
-
+    official: { type: Boolean },
     _profile: { state: true },
     _imageUrl: { state: true },
   };
@@ -24,7 +24,11 @@ export class SakaiProfile extends SakaiShadowElement {
 
     this.loadTranslations("profile-wc");
 
-    this._imageUrl = `/direct/profile/${this.userId}/image/${getSiteId() ? `?siteId=${getSiteId()}` : ""}`;
+    this._imageUrl =
+      `/direct/profile/${this.userId}/image${this.official ? "/official" : ""}`
+      + (getSiteId() ? `?siteId=${getSiteId()}` : "");
+
+    /*this._imageUrl = `/direct/profile/${this.userId}/image/${getSiteId() ? `?siteId=${getSiteId()}` : ""}`;*/
   }
 
   fetchProfileData() {

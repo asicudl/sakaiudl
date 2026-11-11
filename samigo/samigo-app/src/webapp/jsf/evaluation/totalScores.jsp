@@ -316,7 +316,7 @@ function showLoadingMessage() {
         <f:param name="sortAscending" value="true"/>        
         </h:commandLink>
      </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on" official></sakai-user-photo>
      <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />
@@ -362,7 +362,7 @@ function showLoadingMessage() {
              type="org.sakaiproject.tool.assessment.ui.listener.evaluation.TotalScoreListener" />
           </h:commandLink>    
       </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on" official></sakai-user-photo>
      <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />
@@ -409,7 +409,7 @@ function showLoadingMessage() {
              type="org.sakaiproject.tool.assessment.ui.listener.evaluation.TotalScoreListener" />
       </h:commandLink> 
       </f:facet>
-      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on"></sakai-user-photo>
+      <sakai-user-photo user-id='<h:outputText value="#{description.agentId}"/>' profile-popup="on" official></sakai-user-photo>
             <h:panelGroup>
        <h:outputText value="<a name=\"" escape="false" />
        <h:outputText value="#{description.lastInitial}" />
